@@ -24,3 +24,10 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+TWILIO_ACCOUNT_SID = "AC18a18ca921d1c97e4b86c21bf8d2b0b7"
+TWILIO_AUTH_TOKEN = "4c9139cc350fa35e95af01ffabb4dc6c"
+TWILIO_PHONE_NUMBER = "+12602548409"

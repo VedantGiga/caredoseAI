@@ -1,96 +1,148 @@
+import cron from "node-cron";
+import { db, medicinesTable, patientsTable, activityLogsTable } from "@workspace/db";
+import { eq, and, gte, lte, isNull } from "drizzle-orm";
+import { makeReminderCall, registerCall } from "../services/twilio.service.js";
 import { logger } from "../lib/logger.js";
-import type { Medicine } from "@workspace/db";
 
-let Queue: typeof import("bullmq").Queue | undefined;
-let queueInstance: import("bullmq").Queue | undefined;
+let schedulerStarted = false;
 
-async function getQueue() {
-  if (!process.env["REDIS_URL"] && !process.env["UPSTASH_REDIS_REST_URL"]) {
-    logger.warn("Redis not configured - scheduler disabled");
-    return null;
-  }
+export function startScheduler(): void {
+  if (schedulerStarted) return;
+  schedulerStarted = true;
 
-  if (queueInstance) return queueInstance;
+  logger.info("Medicine reminder scheduler started (runs every minute)");
 
-  try {
-    const bullmq = await import("bullmq");
-    Queue = bullmq.Queue;
-
-    const connection = {
-      url: process.env["REDIS_URL"] ?? process.env["UPSTASH_REDIS_REST_URL"] ?? "",
-    };
-
-    queueInstance = new Queue("medicine-reminders", { connection });
-    return queueInstance;
-  } catch (err) {
-    logger.error({ err }, "Failed to initialize BullMQ queue");
-    return null;
-  }
-}
-
-export interface MedicineJobData {
-  medicineId: string;
-  patientId: string;
-  medicineName: string;
-  dosage: string;
-  scheduledTime: string;
-  timeIndex: number;
-}
-
-export async function scheduleMedicine(medicine: Medicine): Promise<void> {
-  const queue = await getQueue();
-  if (!queue) return;
-
-  const now = new Date();
-  const endDate = medicine.endDate ? new Date(medicine.endDate) : null;
-
-  const times = medicine.times as Array<{ hour: number; minute: number; label?: string }>;
-
-  for (let timeIndex = 0; timeIndex < times.length; timeIndex++) {
-    const timeSlot = times[timeIndex]!;
-    const scheduledTime = new Date();
-    scheduledTime.setHours(timeSlot.hour, timeSlot.minute, 0, 0);
-
-    if (scheduledTime <= now) {
-      scheduledTime.setDate(scheduledTime.getDate() + 1);
+  cron.schedule("* * * * *", async () => {
+    try {
+      await checkAndFireReminders();
+    } catch (err) {
+      logger.error({ err }, "Scheduler tick error");
     }
+  });
+}
 
-    if (endDate && scheduledTime > endDate) continue;
+async function checkAndFireReminders(): Promise<void> {
+  const now = new Date();
+  const windowStart = new Date(now);
+  windowStart.setSeconds(0, 0);
+  const windowEnd = new Date(windowStart.getTime() + 60_000);
 
-    const delay = scheduledTime.getTime() - now.getTime();
-    const jobId = `medicine-${medicine.id}-${timeIndex}-${scheduledTime.toISOString().split("T")[0]}`;
+  const todayStr = now.toISOString().split("T")[0]!;
 
-    const jobData: MedicineJobData = {
-      medicineId: medicine.id,
+  const medicines = await db
+    .select({
+      medicine: medicinesTable,
+      patient: patientsTable,
+    })
+    .from(medicinesTable)
+    .innerJoin(patientsTable, eq(medicinesTable.patientId, patientsTable.id))
+    .where(
+      and(
+        eq(medicinesTable.isActive, true),
+        lte(medicinesTable.startDate, todayStr),
+      ),
+    );
+
+  for (const { medicine, patient } of medicines) {
+    if (medicine.endDate && medicine.endDate < todayStr) continue;
+
+    if (!shouldFireToday(medicine.frequency, medicine.startDate, todayStr)) continue;
+
+    const times = medicine.times as Array<{ hour: number; minute: number; label?: string }>;
+
+    for (const timeSlot of times) {
+      const scheduled = new Date();
+      scheduled.setHours(timeSlot.hour, timeSlot.minute, 0, 0);
+
+      if (scheduled >= windowStart && scheduled < windowEnd) {
+        await fireReminder(medicine, patient, scheduled);
+      }
+    }
+  }
+}
+
+function shouldFireToday(
+  frequency: string,
+  startDateStr: string,
+  todayStr: string,
+): boolean {
+  if (frequency === "daily") return true;
+
+  const start = new Date(startDateStr);
+  const today = new Date(todayStr);
+  const diffDays = Math.floor((today.getTime() - start.getTime()) / 86_400_000);
+
+  if (frequency === "alternate_days") return diffDays % 2 === 0;
+  if (frequency === "weekly") return diffDays % 7 === 0;
+  return true;
+}
+
+async function fireReminder(
+  medicine: typeof medicinesTable.$inferSelect,
+  patient: typeof patientsTable.$inferSelect,
+  scheduledTime: Date,
+): Promise<void> {
+  const existing = await db
+    .select()
+    .from(activityLogsTable)
+    .where(
+      and(
+        eq(activityLogsTable.medicineId, medicine.id),
+        gte(activityLogsTable.scheduledTime, new Date(scheduledTime.getTime() - 30_000)),
+        lte(activityLogsTable.scheduledTime, new Date(scheduledTime.getTime() + 30_000)),
+      ),
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    logger.info(
+      { medicineId: medicine.id, scheduledTime },
+      "Reminder already fired for this slot — skipping",
+    );
+    return;
+  }
+
+  const [log] = await db
+    .insert(activityLogsTable)
+    .values({
       patientId: medicine.patientId,
+      medicineId: medicine.id,
       medicineName: medicine.name,
       dosage: medicine.dosage,
-      scheduledTime: scheduledTime.toISOString(),
-      timeIndex,
-    };
+      scheduledTime,
+      status: "pending",
+      source: null,
+    })
+    .returning();
 
-    await queue.add("medicine-reminder", jobData, {
-      jobId,
-      delay,
-      attempts: 3,
-      backoff: { type: "fixed", delay: 15 * 60 * 1000 },
+  if (!log) return;
+
+  logger.info(
+    { logId: log.id, patientName: patient.name, medicine: medicine.name },
+    "Firing medicine reminder call",
+  );
+
+  const callSid = await makeReminderCall(
+    patient.phone,
+    patient.name,
+    medicine.name,
+    medicine.dosage,
+    patient.language,
+  );
+
+  if (callSid) {
+    registerCall(callSid, {
+      logId: log.id,
+      patientId: patient.id,
+      medicineName: medicine.name,
     });
 
-    logger.info(
-      { jobId, medicineId: medicine.id, scheduledTime: scheduledTime.toISOString() },
-      "Scheduled medicine reminder",
-    );
+    await db
+      .update(activityLogsTable)
+      .set({ callSid, source: "call" })
+      .where(eq(activityLogsTable.id, log.id));
   }
 }
 
-export async function cancelMedicineJobs(medicineId: string): Promise<void> {
-  const queue = await getQueue();
-  if (!queue) return;
-
-  const jobs = await queue.getJobs(["waiting", "delayed"]);
-  for (const job of jobs) {
-    if (job.data?.medicineId === medicineId) {
-      await job.remove();
-    }
-  }
-}
+export async function scheduleMedicine(): Promise<void> {}
+export async function cancelMedicineJobs(): Promise<void> {}
