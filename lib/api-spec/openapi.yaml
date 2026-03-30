@@ -1,15 +1,24 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: CareDose AI API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: patients
+    description: Patient management
+  - name: medicines
+    description: Medicine management
+  - name: logs
+    description: Activity logs
+  - name: ai
+    description: AI features (OCR, prescription scanning)
 paths:
   /healthz:
     get:
@@ -24,7 +33,456 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user profile
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /patients:
+    get:
+      operationId: getPatients
+      tags: [patients]
+      summary: Get all patients for the current user
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: List of patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+    post:
+      operationId: createPatient
+      tags: [patients]
+      summary: Create a new patient
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePatientRequest"
+      responses:
+        "201":
+          description: Patient created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /patients/{patientId}:
+    get:
+      operationId: getPatient
+      tags: [patients]
+      summary: Get a specific patient
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Patient details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "404":
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updatePatient
+      tags: [patients]
+      summary: Update a patient
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePatientRequest"
+      responses:
+        "200":
+          description: Patient updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+    delete:
+      operationId: deletePatient
+      tags: [patients]
+      summary: Delete a patient
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Patient deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /patients/{patientId}/medicines:
+    get:
+      operationId: getMedicines
+      tags: [medicines]
+      summary: Get medicines for a patient
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of medicines
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Medicine"
+    post:
+      operationId: createMedicine
+      tags: [medicines]
+      summary: Add a medicine for a patient
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMedicineRequest"
+      responses:
+        "201":
+          description: Medicine created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medicine"
+
+  /patients/{patientId}/medicines/{medicineId}:
+    put:
+      operationId: updateMedicine
+      tags: [medicines]
+      summary: Update a medicine
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: medicineId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMedicineRequest"
+      responses:
+        "200":
+          description: Medicine updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medicine"
+    delete:
+      operationId: deleteMedicine
+      tags: [medicines]
+      summary: Delete a medicine
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: medicineId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Medicine deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /patients/{patientId}/dashboard:
+    get:
+      operationId: getPatientDashboard
+      tags: [patients]
+      summary: Get today's medicine schedule and adherence stats for a patient
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardData"
+
+  /patients/{patientId}/logs:
+    get:
+      operationId: getPatientLogs
+      tags: [logs]
+      summary: Get activity logs for a patient
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Activity logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityLog"
+
+  /logs/{logId}/status:
+    patch:
+      operationId: updateLogStatus
+      tags: [logs]
+      summary: Update the status of a medicine log (manual mark taken/missed)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: logId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLogStatusRequest"
+      responses:
+        "200":
+          description: Log updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityLog"
+
+  /ai/parse-prescription:
+    post:
+      operationId: parsePrescription
+      tags: [ai]
+      summary: Parse a prescription image and extract medicines using OCR + AI
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParsePrescriptionRequest"
+      responses:
+        "200":
+          description: Extracted medicines from prescription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParsePrescriptionResponse"
+
+  /twilio/voice:
+    post:
+      operationId: twilioVoiceWebhook
+      tags: [health]
+      summary: Twilio voice webhook handler
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                CallSid:
+                  type: string
+                Digits:
+                  type: string
+                CallStatus:
+                  type: string
+      responses:
+        "200":
+          description: TwiML response
+          content:
+            application/xml:
+              schema:
+                type: string
+
+  /twilio/status:
+    post:
+      operationId: twilioStatusWebhook
+      tags: [health]
+      summary: Twilio call status webhook
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                CallSid:
+                  type: string
+                CallStatus:
+                  type: string
+      responses:
+        "200":
+          description: Status acknowledged
+
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +492,408 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    RegisterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+      required:
+        - name
+        - email
+        - password
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required:
+        - token
+        - user
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - createdAt
+
+    Patient:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        age:
+          type: integer
+        phone:
+          type: string
+        language:
+          type: string
+          enum: [english, hindi, gujarati, tamil, telugu, marathi]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - name
+        - age
+        - phone
+        - language
+        - createdAt
+
+    CreatePatientRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+        age:
+          type: integer
+          minimum: 1
+          maximum: 150
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{7,14}$'
+        language:
+          type: string
+          enum: [english, hindi, gujarati, tamil, telugu, marathi]
+      required:
+        - name
+        - age
+        - phone
+        - language
+
+    UpdatePatientRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+        phone:
+          type: string
+        language:
+          type: string
+          enum: [english, hindi, gujarati, tamil, telugu, marathi]
+
+    MedicineTime:
+      type: object
+      properties:
+        hour:
+          type: integer
+          minimum: 0
+          maximum: 23
+        minute:
+          type: integer
+          minimum: 0
+          maximum: 59
+        label:
+          type: string
+      required:
+        - hour
+        - minute
+
+    Medicine:
+      type: object
+      properties:
+        id:
+          type: string
+        patientId:
+          type: string
+        name:
+          type: string
+        dosage:
+          type: string
+        frequency:
+          type: string
+          enum: [daily, alternate_days, weekly, custom]
+        times:
+          type: array
+          items:
+            $ref: "#/components/schemas/MedicineTime"
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - patientId
+        - name
+        - dosage
+        - frequency
+        - times
+        - startDate
+        - isActive
+        - createdAt
+
+    CreateMedicineRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        dosage:
+          type: string
+          minLength: 1
+        frequency:
+          type: string
+          enum: [daily, alternate_days, weekly, custom]
+        times:
+          type: array
+          items:
+            $ref: "#/components/schemas/MedicineTime"
+          minItems: 1
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+      required:
+        - name
+        - dosage
+        - frequency
+        - times
+        - startDate
+
+    UpdateMedicineRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        dosage:
+          type: string
+        frequency:
+          type: string
+          enum: [daily, alternate_days, weekly, custom]
+        times:
+          type: array
+          items:
+            $ref: "#/components/schemas/MedicineTime"
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        isActive:
+          type: boolean
+
+    MedicineDoseStatus:
+      type: object
+      properties:
+        logId:
+          type: string
+          nullable: true
+        medicineId:
+          type: string
+        medicineName:
+          type: string
+        dosage:
+          type: string
+        scheduledTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [taken, missed, pending]
+        source:
+          type: string
+          enum: [call, manual, auto]
+          nullable: true
+      required:
+        - medicineId
+        - medicineName
+        - dosage
+        - scheduledTime
+        - status
+
+    DashboardData:
+      type: object
+      properties:
+        patient:
+          $ref: "#/components/schemas/Patient"
+        todayDoses:
+          type: array
+          items:
+            $ref: "#/components/schemas/MedicineDoseStatus"
+        adherencePercentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        weeklyAdherence:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              percentage:
+                type: number
+            required:
+              - date
+              - percentage
+      required:
+        - patient
+        - todayDoses
+        - adherencePercentage
+        - weeklyAdherence
+
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: string
+        patientId:
+          type: string
+        medicineId:
+          type: string
+        medicineName:
+          type: string
+        dosage:
+          type: string
+        scheduledTime:
+          type: string
+          format: date-time
+        respondedAt:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [taken, missed, pending, no_response]
+        source:
+          type: string
+          enum: [call, manual, auto]
+          nullable: true
+        callSid:
+          type: string
+          nullable: true
+        retryCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - patientId
+        - medicineId
+        - medicineName
+        - dosage
+        - scheduledTime
+        - status
+        - retryCount
+        - createdAt
+
+    UpdateLogStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [taken, missed]
+      required:
+        - status
+
+    ExtractedMedicine:
+      type: object
+      properties:
+        name:
+          type: string
+        dosage:
+          type: string
+        frequency:
+          type: string
+        time:
+          type: string
+      required:
+        - name
+        - dosage
+
+    ParsePrescriptionRequest:
+      type: object
+      properties:
+        imageBase64:
+          type: string
+          description: Base64 encoded prescription image
+      required:
+        - imageBase64
+
+    ParsePrescriptionResponse:
+      type: object
+      properties:
+        medicines:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtractedMedicine"
+        rawText:
+          type: string
+      required:
+        - medicines

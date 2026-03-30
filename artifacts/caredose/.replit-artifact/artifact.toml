@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "CareDose AI"
+version = "1.0.0"
+id = "artifacts/caredose"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 25981
+
+[services.development]
+run = "pnpm --filter @workspace/caredose run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/caredose", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/caredose", "run", "serve" ]
+
+[services.env]
+PORT = "25981"
+BASE_PATH = "/"

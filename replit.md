@@ -1,4 +1,4 @@
-# Workspace
+# CareDose AI — Workspace
 
 ## Overview
 
@@ -12,85 +12,126 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Validation**: Zod 3 (`zod`), `drizzle-zod`
+- **Build**: esbuild (ESM bundle)
+- **Mobile**: Expo React Native + TypeScript
+- **State**: Zustand + TanStack Query
+
+## Project Goal
+
+CareDose AI is a production-grade SaaS mobile app for smart medicine management targeting elderly patients:
+- AI-powered voice call reminders via Twilio
+- Medicine adherence tracking with percentage stats
+- Family monitoring dashboard
+- OCR prescription scanning with OpenAI LLM parsing
+- BullMQ scheduler (requires Redis/Upstash)
 
 ## Structure
 
 ```text
-artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+workspace/
+├── artifacts/
+│   ├── api-server/         # Express API server
+│   │   ├── src/
+│   │   │   ├── controllers/ # auth, patients, medicines, logs, ai
+│   │   │   ├── routes/      # index.ts mounts all routes
+│   │   │   ├── services/    # twilio.service.ts, openai.service.ts
+│   │   │   ├── queues/      # scheduler.ts (BullMQ, conditional on REDIS_URL)
+│   │   │   ├── middlewares/ # authenticate.ts (JWT)
+│   │   │   └── utils/       # auth.ts (bcryptjs + JWT)
+│   │   └── build.mjs        # esbuild config
+│   ├── caredose/            # Expo React Native mobile app
+│   │   ├── app/             # Expo Router screens
+│   │   │   ├── _layout.tsx  # Root layout (fonts, auth redirect, QueryClient)
+│   │   │   ├── index.tsx    # Redirect (authenticated → tabs, else → onboarding)
+│   │   │   ├── onboarding.tsx  # 4-slide onboarding carousel
+│   │   │   ├── auth/
+│   │   │   │   ├── login.tsx
+│   │   │   │   └── register.tsx
+│   │   │   ├── (tabs)/
+│   │   │   │   ├── _layout.tsx   # Tab navigation (native or classic)
+│   │   │   │   ├── index.tsx     # Dashboard (adherence ring + doses)
+│   │   │   │   ├── activity.tsx  # Activity timeline / logs
+│   │   │   │   └── profile.tsx   # Settings and user profile
+│   │   │   └── patients/
+│   │   │       ├── add.tsx         # Add patient form
+│   │   │       ├── add-medicine.tsx # Add medicine schedule
+│   │   │       ├── prescription.tsx # AI prescription scanner
+│   │   │       ├── medicines.tsx   # Medicine list management
+│   │   │       └── list.tsx        # Patient list and selector
+│   │   ├── components/
+│   │   │   ├── AdherenceRing.tsx   # SVG circular progress ring
+│   │   │   ├── MedicineDoseCard.tsx # Dose card with status + actions
+│   │   │   ├── PatientAvatar.tsx   # Color-coded initials avatar
+│   │   │   └── ErrorBoundary.tsx
+│   │   ├── constants/
+│   │   │   └── colors.ts    # Design system colors
+│   │   ├── store/
+│   │   │   ├── authStore.ts    # Zustand auth (JWT + AsyncStorage persist)
+│   │   │   └── patientStore.ts # Selected patient state
+│   │   └── lib/
+│   │       └── api.ts         # Typed API client (fetch + auth header)
+│   └── mockup-sandbox/     # Vite component preview server
+├── lib/
+│   ├── api-spec/           # OpenAPI spec
+│   ├── db/                 # Drizzle ORM schema + DB connection
+│   │   └── src/schema/     # users, patients, medicines, activity_logs
+│   └── ...
+└── pnpm-workspace.yaml
 ```
 
-## TypeScript & Composite Projects
+## Environment Variables
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+### API Server (required for full functionality)
+- `DATABASE_URL` — PostgreSQL URL (auto-provided by Replit)
+- `SESSION_SECRET` / `JWT_SECRET` — JWT signing secret
+- `TWILIO_ACCOUNT_SID` — for voice call reminders
+- `TWILIO_AUTH_TOKEN` — for voice call reminders
+- `TWILIO_PHONE_NUMBER` — Twilio phone number
+- `OPENAI_API_KEY` — for prescription parsing (falls back to mock)
+- `REDIS_URL` or `UPSTASH_REDIS_REST_URL` — for BullMQ scheduler (optional)
+- `UPSTASH_REDIS_REST_TOKEN` — if using Upstash
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+### Mobile (Expo)
+- `EXPO_PUBLIC_DOMAIN` — API server domain (auto-set in workflow)
 
-## Root Scripts
+## API Routes
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+All routes under `/api`:
+- `POST /auth/register`, `POST /auth/login`, `GET /auth/me`
+- `GET /patients`, `POST /patients`, `GET/PUT/DELETE /patients/:id`
+- `GET /patients/:id/dashboard` — adherence ring + today's doses
+- `GET /patients/:id/logs` — activity timeline
+- `GET/POST /patients/:id/medicines`, `PUT/DELETE /patients/:id/medicines/:id`
+- `PATCH /logs/:id/status` — mark taken/missed
+- `POST /ai/parse-prescription` — OCR + AI extraction
 
-## Packages
+## Color System
 
-### `artifacts/api-server` (`@workspace/api-server`)
+- Green `#10B981` = Taken
+- Red `#EF4444` = Missed
+- Yellow `#F59E0B` = Pending
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
+## Development Commands
 
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+```bash
+# Start API server dev
+pnpm --filter @workspace/api-server run dev
 
-### `lib/db` (`@workspace/db`)
+# Start Expo app
+pnpm --filter @workspace/caredose run dev
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
+# Push DB schema
+pnpm --filter @workspace/db run push
 
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
+# Build API server
+pnpm --filter @workspace/api-server run build
+```
 
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
+## Key Design Decisions
 
-### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+- `zod/v4` imports were changed to `zod` (Zod v3 installed)
+- Zod `.email()` standalone changed to `.string().email()`
+- BullMQ scheduler is conditional — gracefully disabled without Redis
+- `isLiquidGlassAvailable()` used to toggle iOS 26 NativeTabs vs classic Tabs
+- `onSuccess` in TanStack Query v5 removed; replaced with `useEffect`
