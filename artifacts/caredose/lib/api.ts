@@ -1,6 +1,35 @@
 import { useAuthStore } from "../store/authStore";
 
-const BASE_URL = `https://${process.env["EXPO_PUBLIC_DOMAIN"]}/api`;
+const getBaseUrl = (): string => {
+  const domain = process.env["EXPO_PUBLIC_DOMAIN"];
+  const isWeb = typeof window !== "undefined";
+
+  // If we have a domain set (usually via env)
+  if (domain && domain !== "undefined" && domain !== "null") {
+    // In Replit, if the domain is [id].[repl].co and the backend is on 3001,
+    // the backend is actually reachable at [id]-3001.[repl].co
+    if (domain.includes("repl.co") || domain.includes("replit.dev")) {
+      return `https://${domain.replace(".", "-3001.")}/api`;
+    }
+    return `https://${domain}/api`;
+  }
+
+  // Fallback for web development
+  if (isWeb) {
+    const host = window.location.host;
+    if (host.includes(":")) {
+       // Localhost or specific port
+       return `http://${host.split(":")[0]}:3001/api`;
+    }
+    if (host.includes("repl.co") || host.includes("replit.dev")) {
+      return `https://${host.replace(".", "-3001.")}/api`;
+    }
+  }
+
+  return "http://localhost:3001/api"; // Final local fallback
+};
+
+const BASE_URL = getBaseUrl();
 
 async function apiFetch<T>(
   path: string,
@@ -15,23 +44,29 @@ async function apiFetch<T>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers,
+    });
 
-  if (response.status === 401) {
-    useAuthStore.getState().logout();
-    throw new Error("Unauthorized");
+    if (response.status === 401) {
+      useAuthStore.getState().logout();
+      throw new Error("Unauthorized");
+    }
+
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
+      throw new Error(data.message ?? data.error ?? `Request failed with status ${response.status}`);
+    }
+
+    if (response.status === 204) return {} as T;
+    return response.json() as Promise<T>;
+  } catch (error) {
+    console.error(`API Fetch Error [${options.method || "GET"} ${path}]:`, error);
+    console.error(`Target URL: ${BASE_URL}${path}`);
+    throw error;
   }
-
-  if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
-    throw new Error(data.message ?? data.error ?? `Request failed with status ${response.status}`);
-  }
-
-  if (response.status === 204) return {} as T;
-  return response.json() as Promise<T>;
 }
 
 export const api = {

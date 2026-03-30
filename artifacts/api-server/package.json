@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
+    "dev": "cross-env NODE_ENV=development pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -15,8 +15,10 @@
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
+    "dotenv": "^16.4.7",
     "drizzle-orm": "catalog:",
     "express": "^5",
+    "firebase-admin": "^13.1.0",
     "jsonwebtoken": "^9.0.3",
     "node-cron": "^4.2.1",
     "pino": "^9",

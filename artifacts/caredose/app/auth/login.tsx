@@ -16,8 +16,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
-import { authApi } from "@/lib/api";
+import Constants from "expo-constants";
 import { useAuthStore } from "@/store/authStore";
+import { auth, getGoogleSignin } from "@/lib/firebase";
+import { signInWithEmailAndPassword, signInWithCredential, GoogleAuthProvider } from "firebase/auth";
+
+const isExpoGo = Constants.appOwnership === "expo";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -39,17 +43,82 @@ export default function LoginScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const syncAuth = async (firebaseUser: any) => {
+    try {
+      const token = await firebaseUser.getIdToken();
+      setAuth({
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName || "User",
+        email: firebaseUser.email || "",
+        photoURL: firebaseUser.photoURL || undefined,
+      }, token);
+    } catch (e) {
+      console.error("Token fetch failed:", e);
+      // Fallback without token (will fail on API calls)
+      setAuth({
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName || "User",
+        email: firebaseUser.email || "",
+        photoURL: firebaseUser.photoURL || undefined,
+      });
+    }
+  };
+
   const handleLogin = async () => {
     if (!validate()) return;
     setLoading(true);
     try {
-      const res = await authApi.login(email.trim().toLowerCase(), password);
-      setAuth(res.token, res.user);
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      await syncAuth(userCredential.user);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)");
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Login failed";
+    } catch (err: any) {
+      let message = "Login failed";
+      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+        message = "Invalid email or password";
+      } else if (err.code === "auth/too-many-requests") {
+        message = "Too many failed attempts. Try again later.";
+      }
+      
       Alert.alert("Login Failed", message);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (isExpoGo) {
+      Alert.alert(
+        "Development Build Required",
+        "Google Sign-In requires a native module that isn't available in Expo Go. Please run this app as a Development Build (npx expo run:android/ios)."
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const GoogleSignin = getGoogleSignin();
+      if (!GoogleSignin) throw new Error("Google Sign-In failed to load");
+      
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+      
+      if (!idToken) throw new Error("No ID Token found");
+      
+      const credential = GoogleAuthProvider.credential(idToken);
+      const userCredential = await signInWithCredential(auth, credential);
+      
+      await syncAuth(userCredential.user);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/(tabs)");
+    } catch (err: any) {
+      console.log("Google Sign-In Error:", err);
+      // Don't alert if user cancelled
+      if (err.code !== "7" && err.code !== "SIGN_IN_CANCELLED") {
+        Alert.alert("Google Login Failed", "Could not sign in with Google.");
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setLoading(false);
@@ -134,6 +203,24 @@ export default function LoginScreen() {
             ) : (
               <Text style={styles.buttonText}>Sign In</Text>
             )}
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.line} />
+            <Text style={styles.dividerText}>or continue with</Text>
+            <View style={styles.line} />
+          </View>
+
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogleLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <View style={styles.googleIconContainer}>
+              <Feather name="log-in" size={20} color={Colors.text} />
+            </View>
+            <Text style={styles.googleButtonText}>Google</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -266,5 +353,46 @@ const styles = StyleSheet.create({
   registerTextBold: {
     fontFamily: "Inter_600SemiBold",
     color: Colors.primary,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 24,
+    gap: 12,
+  },
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+    opacity: 0.5,
+  },
+  dividerText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textTertiary,
+    textTransform: "lowercase",
+  },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: 14,
+    paddingVertical: 15,
+    marginBottom: 24,
+    gap: 12,
+  },
+  googleIconContainer: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
   },
 });

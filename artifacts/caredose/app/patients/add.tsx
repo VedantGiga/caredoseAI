@@ -63,14 +63,21 @@ export default function AddPatientScreen() {
     if (name.trim().length < 2) newErrors.name = "Name must be at least 2 characters";
     const ageNum = parseInt(age, 10);
     if (isNaN(ageNum) || ageNum < 1 || ageNum > 150) newErrors.age = "Enter a valid age (1-150)";
-    if (phone.trim().length < 8) newErrors.phone = "Enter a valid phone number";
+    
+    // Validate Indian phone number (10 digits)
+    const phoneClean = phone.trim().replace(/\s/g, "");
+    if (phoneClean.length !== 10 || !/^\d+$/.test(phoneClean)) {
+      newErrors.phone = "Enter a valid 10-digit mobile number";
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = () => {
     if (!validate()) return;
-    createPatient({ name: name.trim(), age: parseInt(age, 10), phone: phone.trim(), language });
+    const fullPhone = `+91${phone.trim().replace(/\s/g, "")}`;
+    createPatient({ name: name.trim(), age: parseInt(age, 10), phone: fullPhone, language });
   };
 
   return (
@@ -143,14 +150,18 @@ export default function AddPatientScreen() {
               This number will receive AI voice call reminders
             </Text>
             <View style={[styles.inputWrapper, errors.phone && styles.inputError]}>
-              <Feather name="phone" size={18} color={Colors.textTertiary} />
+              <View style={styles.prefixContainer}>
+                <Text style={styles.prefixText}>+91</Text>
+                <View style={styles.divider} />
+              </View>
               <TextInput
                 style={styles.input}
-                placeholder="+91 98765 43210"
+                placeholder="98765 43210"
                 placeholderTextColor={Colors.textTertiary}
                 value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
+                onChangeText={(val) => setPhone(val.replace(/[^\d]/g, "").slice(0, 10))}
+                keyboardType="number-pad"
+                maxLength={10}
               />
             </View>
             {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
@@ -318,19 +329,39 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontFamily: "Inter_600SemiBold",
   },
+  prefixContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  prefixText: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  divider: {
+    width: 1,
+    height: 20,
+    backgroundColor: Colors.border,
+  },
   button: {
     backgroundColor: Colors.primary,
-    borderRadius: 16,
-    paddingVertical: 17,
+    borderRadius: 18,
+    paddingVertical: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
   },
   buttonDisabled: { opacity: 0.7 },
   buttonText: {
-    fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
     color: Colors.textInverse,
   },
 });

@@ -120,7 +120,9 @@ export default function PatientListScreen() {
                 </View>
                 <View style={styles.patientPhone}>
                   <Feather name="phone" size={12} color={Colors.textTertiary} />
-                  <Text style={styles.patientMetaText}>{item.phone}</Text>
+                  <Text style={styles.patientMetaText}>
+                    {item.phone.replace(/(\+91)(\d{5})(\d{5})/, "$1 $2 $3")}
+                  </Text>
                 </View>
               </View>
               <TouchableOpacity

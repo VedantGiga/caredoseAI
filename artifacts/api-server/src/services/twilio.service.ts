@@ -37,7 +37,7 @@ export async function makeReminderCall(
   const webhookUrl = `https://${APP_BASE_URL}/api/twilio/voice`;
 
   const messageMap: Record<string, string> = {
-    hindi: `Namaste ${patientName}, aapki ${medicineName} ${dosage} lene ka samay ho gaya hai. Kripya abhi le lijiye.`,
+    hindi: `${patientName} ji, aapka dawai ${medicineName} ki ${dosage} lene ka time ho gaya hai.`,
     english: `Hello ${patientName}, it is time to take your ${medicineName} ${dosage}. Please take it now.`,
     gujarati: `Namaste ${patientName}, aapni ${medicineName} ${dosage} leva no samay thayi gayo chhe.`,
     tamil: `Vanakkam ${patientName}, ungalukkaga ${medicineName} ${dosage} edukka neram aachi.`,
@@ -46,14 +46,15 @@ export async function makeReminderCall(
   };
 
   const message = messageMap[language] ?? messageMap["english"]!;
+  const isHindi = language === "hindi";
 
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Gather numDigits="1" action="${webhookUrl}" method="POST" timeout="10">
-    <Say voice="alice" language="${language === "hindi" ? "hi-IN" : language === "tamil" ? "ta-IN" : language === "telugu" ? "te-IN" : "en-IN"}">${message}</Say>
-    <Say voice="alice">Press 1 if you have taken your medicine. Press 2 if you have not taken it.</Say>
+    <Say voice="Polly.Aditi" language="hi-IN">${message}</Say>
+    <Say voice="Polly.Aditi" language="hi-IN">Dawai le li hai to ek dabaye, yadi nahi li hai to do dabaye.</Say>
   </Gather>
-  <Say voice="alice">No response received. Please take your medicine. Goodbye.</Say>
+  <Say voice="Polly.Aditi" language="hi-IN">Koi javab nahi mila. Kripya apni dawai le lijiye. Alvida.</Say>
 </Response>`;
 
   try {

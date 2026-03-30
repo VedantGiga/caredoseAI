@@ -15,6 +15,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAuthStore } from "@/store/authStore";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -29,6 +31,25 @@ const queryClient = new QueryClient({
 
 function RootLayoutNav() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const logout = useAuthStore((s) => s.logout);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setAuth({
+          id: user.uid,
+          name: user.displayName || "User",
+          email: user.email || "",
+          photoURL: user.photoURL || undefined,
+        });
+      } else {
+        logout();
+      }
+    });
+
+    return () => unsubscribe();
+  }, [setAuth, logout]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

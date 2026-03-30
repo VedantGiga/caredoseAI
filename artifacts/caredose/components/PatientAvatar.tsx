@@ -55,6 +55,13 @@ const styles = StyleSheet.create({
   avatar: {
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   initials: {
     fontFamily: "Inter_700Bold",

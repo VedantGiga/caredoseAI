@@ -1,102 +1,104 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { hashPassword, comparePassword, signToken } from "../utils/auth.js";
-import { AuthRequest } from "../middlewares/authenticate.js";
+import { adminAuth, adminDb } from "../lib/firebase-admin";
+import { AuthRequest } from "../middlewares/authenticate";
+
+const USERS_COLLECTION = "users";
 
 const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
-});
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  role: z.enum(["caregiver", "patient"]).default("caregiver"),
 });
 
 export async function register(req: Request, res: Response): Promise<void> {
   const parseResult = registerSchema.safeParse(req.body);
   if (!parseResult.success) {
-    res.status(400).json({ error: "ValidationError", message: "Invalid input" });
+    res.status(400).json({ error: "ValidationError", message: parseResult.error.message });
     return;
   }
 
-  const { name, email, password } = parseResult.data;
+  const { name, email, password, role } = parseResult.data;
 
-  const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  if (existing.length > 0) {
-    res.status(409).json({ error: "Conflict", message: "User already exists" });
-    return;
+  try {
+    // 1. Create User in Firebase Auth
+    const userRecord = await adminAuth.createUser({
+      email,
+      password,
+      displayName: name,
+    });
+
+    // 2. Create User Profile in Firestore
+    const userData = {
+      id: userRecord.uid,
+      name,
+      email,
+      role,
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+    };
+
+    await adminDb.collection(USERS_COLLECTION).doc(userRecord.uid).set(userData);
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user: userData,
+    });
+  } catch (error: any) {
+    if (error.code === "auth/email-already-exists") {
+      res.status(409).json({ error: "Conflict", message: "User already exists" });
+    } else {
+      res.status(500).json({ error: "InternalError", message: error.message });
+    }
   }
-
-  const passwordHash = await hashPassword(password);
-  const [user] = await db.insert(usersTable).values({ name, email, passwordHash }).returning();
-
-  const token = signToken({ userId: user!.id, email: user!.email });
-
-  res.status(201).json({
-    token,
-    user: {
-      id: user!.id,
-      name: user!.name,
-      email: user!.email,
-      createdAt: user!.createdAt,
-    },
-  });
 }
 
-export async function login(req: Request, res: Response): Promise<void> {
-  const parseResult = loginSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    res.status(400).json({ error: "ValidationError", message: "Invalid input" });
-    return;
-  }
-
-  const { email, password } = parseResult.data;
-
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  if (!user) {
-    res.status(401).json({ error: "Unauthorized", message: "Invalid credentials" });
-    return;
-  }
-
-  const valid = await comparePassword(password, user.passwordHash);
-  if (!valid) {
-    res.status(401).json({ error: "Unauthorized", message: "Invalid credentials" });
-    return;
-  }
-
-  const token = signToken({ userId: user.id, email: user.email });
-
-  res.json({
-    token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      createdAt: user.createdAt,
-    },
-  });
-}
-
+/**
+ * Since Firebase Client SDK handles login on the mobile app, 
+ * this endpoint is used to sync/fetch the Firestore profile 
+ * once the user is authenticated.
+ */
 export async function getMe(req: AuthRequest, res: Response): Promise<void> {
-  const [user] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.id, req.userId!))
-    .limit(1);
-
-  if (!user) {
-    res.status(404).json({ error: "NotFound", message: "User not found" });
+  if (!req.userId) {
+    res.status(401).json({ error: "Unauthorized", message: "User ID not found in request" });
     return;
   }
 
-  res.json({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    createdAt: user.createdAt,
+  try {
+    let userDoc = await adminDb.collection(USERS_COLLECTION).doc(req.userId).get();
+
+    if (!userDoc.exists) {
+      // Auto-create missing profile (e.g. from Google login)
+      const userRecord = await adminAuth.getUser(req.userId);
+      const userData = {
+        id: req.userId,
+        name: userRecord.displayName || "User",
+        email: userRecord.email || "",
+        role: "caregiver",
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+      };
+      
+      await adminDb.collection(USERS_COLLECTION).doc(req.userId).set(userData);
+      userDoc = await adminDb.collection(USERS_COLLECTION).doc(req.userId).get();
+    } else {
+      // Update last login
+      await adminDb.collection(USERS_COLLECTION).doc(req.userId).update({
+        lastLoginAt: new Date().toISOString()
+      });
+    }
+
+    res.json(userDoc.data());
+  } catch (error: any) {
+    res.status(500).json({ error: "InternalError", message: error.message });
+  }
+}
+
+// Login is typically handled on the client via Firebase SDK
+// and then the token is passed to these endpoints.
+export async function login(req: Request, res: Response): Promise<void> {
+  res.status(501).json({ 
+    message: "Login should be handled on the client via Firebase SDK. Use the ID token to authenticate with API endpoints." 
   });
 }

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   Dimensions,
   Platform,
@@ -13,6 +12,14 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedScrollHandler,
+  interpolate,
+  Extrapolate,
+  SharedValue,
+} from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 
 const { width } = Dimensions.get("window");
@@ -56,13 +63,58 @@ const slides = [
   },
 ];
 
+interface DotProps {
+  index: number;
+  scrollX: SharedValue<number>;
+}
+
+const Dot = ({ index, scrollX }: DotProps) => {
+  const animatedDotStyle = useAnimatedStyle(() => {
+    const widthDot = interpolate(
+      scrollX.value,
+      [(index - 1) * width, index * width, (index + 1) * width],
+      [8, 24, 8],
+      Extrapolate.CLAMP
+    );
+
+    const opacity = interpolate(
+      scrollX.value,
+      [(index - 1) * width, index * width, (index + 1) * width],
+      [0.3, 1, 0.3],
+      Extrapolate.CLAMP
+    );
+
+    return {
+      width: widthDot,
+      opacity,
+    };
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.dot,
+        animatedDotStyle,
+        { backgroundColor: Colors.primary },
+      ]}
+    />
+  );
+};
+
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
+  const scrollX = useSharedValue(0);
+  const flatListRef = useRef<Animated.FlatList<any>>(null);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollX.value = event.contentOffset.x;
+    },
+  });
 
   const handleNext = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -83,51 +135,54 @@ export default function OnboardingScreen() {
 
       <View style={styles.header}>
         <View style={styles.logo}>
-          <Feather name="heart" size={20} color={Colors.primary} />
+          <View style={styles.logoIcon}>
+            <Feather name="heart" size={16} color={Colors.textInverse} />
+          </View>
           <Text style={styles.logoText}>CareDose AI</Text>
         </View>
         {currentIndex < slides.length - 1 && (
-          <TouchableOpacity onPress={handleSkip}>
+          <TouchableOpacity onPress={handleSkip} activeOpacity={0.7}>
             <Text style={styles.skipText}>Skip</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      <FlatList
+      <Animated.FlatList
         ref={flatListRef}
         data={slides}
         horizontal
         pagingEnabled
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={(e) => {
           setCurrentIndex(Math.round(e.nativeEvent.contentOffset.x / width));
         }}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={[styles.slide, { width }]}>
-            <View style={[styles.iconContainer, { backgroundColor: item.iconBg }]}>
-              <Feather name={item.icon} size={52} color={item.iconColor} />
+        renderItem={({ item, index }) => {
+          return (
+            <View style={[styles.slide, { width }]}>
+              <Animated.View 
+                style={[
+                  styles.iconContainer, 
+                  { backgroundColor: item.iconBg }
+                ]}
+              >
+                <Feather name={item.icon} size={52} color={item.iconColor} />
+              </Animated.View>
+              <View style={styles.textContainer}>
+                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.subtitle}>{item.subtitle}</Text>
+              </View>
             </View>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.subtitle}>{item.subtitle}</Text>
-          </View>
-        )}
+          );
+        }}
       />
 
       <View style={styles.footer}>
         <View style={styles.dots}>
           {slides.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                {
-                  backgroundColor:
-                    index === currentIndex ? Colors.primary : Colors.border,
-                  width: index === currentIndex ? 24 : 8,
-                },
-              ]}
-            />
+            <Dot key={index} index={index} scrollX={scrollX} />
           ))}
         </View>
 
@@ -136,9 +191,9 @@ export default function OnboardingScreen() {
           onPress={handleNext}
           activeOpacity={0.85}
         >
-          <Text style={styles.nextButtonText}>
+          <Animated.Text style={styles.nextButtonText}>
             {currentIndex === slides.length - 1 ? "Get Started" : "Next"}
-          </Text>
+          </Animated.Text>
           <Feather
             name={currentIndex === slides.length - 1 ? "arrow-right" : "chevron-right"}
             size={20}
@@ -165,58 +220,84 @@ const styles = StyleSheet.create({
   logo: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
+  },
+  logoIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   logoText: {
     fontSize: 18,
     fontFamily: "Inter_700Bold",
     color: Colors.text,
+    letterSpacing: -0.5,
   },
   skipText: {
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Inter_600SemiBold",
     color: Colors.textSecondary,
+    backgroundColor: Colors.surfaceAlt,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   slide: {
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 36,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 40,
   },
   iconContainer: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 48,
+    marginBottom: 60,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  textContainer: {
+    alignItems: "center",
   },
   title: {
-    fontSize: 34,
-    fontFamily: "Inter_700Bold",
+    fontSize: 32,
+    fontFamily: "Inter_800ExtraBold",
     color: Colors.text,
     textAlign: "center",
-    lineHeight: 42,
-    marginBottom: 16,
+    lineHeight: 40,
+    marginBottom: 20,
+    letterSpacing: -0.8,
   },
   subtitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: "Inter_400Regular",
     color: Colors.textSecondary,
     textAlign: "center",
     lineHeight: 26,
+    paddingHorizontal: 10,
   },
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 16,
-    gap: 24,
+    paddingBottom: 24,
+    gap: 32,
   },
   dots: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
   },
   dot: {
     height: 8,
@@ -227,13 +308,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 18,
-    borderRadius: 18,
+    gap: 10,
+    paddingVertical: 20,
+    borderRadius: 20,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 8,
   },
   nextButtonText: {
-    fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
     color: Colors.textInverse,
   },
 });
+
+

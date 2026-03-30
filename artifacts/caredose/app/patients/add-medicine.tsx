@@ -10,7 +10,9 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  Modal,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
@@ -52,6 +54,8 @@ export default function AddMedicineScreen() {
   const [selectedTimes, setSelectedTimes] = useState<MedicineTime[]>([
     { hour: 8, minute: 0, label: "Morning" },
   ]);
+  const [showPicker, setShowPicker] = useState(false);
+  const [tempTime, setTempTime] = useState(new Date());
   const [startDate] = useState(new Date().toISOString().split("T")[0]!);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -89,11 +93,40 @@ export default function AddMedicineScreen() {
       (t) => t.hour === preset.hour && t.minute === preset.minute,
     );
     if (exists) {
-      if (selectedTimes.length === 1) return;
-      setSelectedTimes(selectedTimes.filter((t) => !(t.hour === preset.hour && t.minute === preset.minute)));
+      removeTime(preset.hour, preset.minute);
     } else {
       setSelectedTimes([...selectedTimes, { hour: preset.hour, minute: preset.minute, label: preset.label }]);
     }
+  };
+
+  const removeTime = (hour: number, minute: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (selectedTimes.length === 1) return;
+    setSelectedTimes(selectedTimes.filter((t) => !(t.hour === hour && t.minute === minute)));
+  };
+
+  const onTimeChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === "android") setShowPicker(false);
+    
+    if (selectedDate) {
+      setTempTime(selectedDate);
+      if (Platform.OS === "android") {
+        addTime(selectedDate);
+      }
+    } else {
+      setShowPicker(false);
+    }
+  };
+
+  const addTime = (date: Date) => {
+    const hour = date.getHours();
+    const minute = date.getMinutes();
+    const exists = selectedTimes.some((t) => t.hour === hour && t.minute === minute);
+    
+    if (!exists) {
+      setSelectedTimes([...selectedTimes, { hour, minute, label: "Custom" }]);
+    }
+    setShowPicker(false);
   };
 
   const validate = () => {
@@ -206,10 +239,46 @@ export default function AddMedicineScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Reminder Times</Text>
-            <Text style={styles.hint}>Select all times for this medicine</Text>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.label}>Reminder Times</Text>
+                <Text style={styles.hint}>Click a time to remove it</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.addTimeBtn}
+                onPress={() => {
+                  setTempTime(new Date());
+                  setShowPicker(true);
+                }}
+              >
+                <Feather name="plus-circle" size={16} color={Colors.primary} />
+                <Text style={styles.addTimeBtnText}>Add Time</Text>
+              </TouchableOpacity>
+            </View>
+
             {errors.times && <Text style={styles.errorText}>{errors.times}</Text>}
-            <View style={styles.timesGrid}>
+            
+            <View style={styles.selectedTimesGrid}>
+              {selectedTimes
+                .sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute))
+                .map((time, idx) => (
+                  <View key={`${time.hour}-${time.minute}-${idx}`} style={styles.selectedTimeCard}>
+                    <View style={styles.selectedTimeInfo}>
+                      <Text style={styles.selectedTimeValue}>{formatHour(time.hour, time.minute)}</Text>
+                      <Text style={styles.selectedTimeLabel}>{time.label || "Custom"}</Text>
+                    </View>
+                    <TouchableOpacity 
+                      onPress={() => removeTime(time.hour, time.minute)}
+                      style={styles.removeBtn}
+                    >
+                      <Feather name="x" size={16} color={Colors.missed} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+            </View>
+
+            <Text style={styles.subLabel}>Quick Presets</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetsScroll}>
               {TIME_PRESETS.map((preset) => {
                 const isSelected = selectedTimes.some(
                   (t) => t.hour === preset.hour && t.minute === preset.minute,
@@ -217,29 +286,53 @@ export default function AddMedicineScreen() {
                 return (
                   <TouchableOpacity
                     key={preset.label}
-                    style={[styles.timeChip, isSelected && styles.timeChipActive]}
+                    style={[styles.presetChip, isSelected && styles.presetChipActive]}
                     onPress={() => toggleTimePreset(preset)}
-                    activeOpacity={0.8}
                   >
-                    <Feather
-                      name={isSelected ? "check-circle" : "circle"}
-                      size={16}
-                      color={isSelected ? Colors.primary : Colors.textTertiary}
-                    />
-                    <View>
-                      <Text style={[styles.timeLabel, isSelected && styles.timeLabelActive]}>
-                        {preset.label}
-                      </Text>
-                      <Text style={[styles.timeValue, isSelected && styles.timeValueActive]}>
-                        {formatHour(preset.hour, preset.minute)}
-                      </Text>
-                    </View>
+                    <Text style={[styles.presetChipText, isSelected && styles.presetChipTextActive]}>
+                      {preset.label} ({formatHour(preset.hour, preset.minute)})
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
-            </View>
+            </ScrollView>
           </View>
         </View>
+
+        {showPicker && (
+          Platform.OS === "ios" ? (
+            <Modal transparent visible={showPicker} animationType="fade">
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Select Time</Text>
+                    <TouchableOpacity onPress={() => setShowPicker(false)}>
+                      <Text style={styles.modalDone}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={tempTime}
+                    mode="time"
+                    display="spinner"
+                    onChange={onTimeChange}
+                    textColor={Colors.text}
+                  />
+                  <TouchableOpacity style={styles.modalSubmit} onPress={() => addTime(tempTime)}>
+                    <Text style={styles.modalSubmitText}>Add Time Slot</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+          ) : (
+            <DateTimePicker
+              value={tempTime}
+              mode="time"
+              is24Hour={false}
+              display="default"
+              onChange={onTimeChange}
+            />
+          )
+        )}
 
         <TouchableOpacity
           style={[styles.button, (isPending || !activePatientId) && styles.buttonDisabled]}
@@ -358,4 +451,26 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.7 },
   buttonText: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: Colors.textInverse },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 },
+  addTimeBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primaryLight, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+  addTimeBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.primaryDark },
+  selectedTimesGrid: { gap: 12, marginBottom: 20 },
+  selectedTimeCard: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: Colors.surface, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1.5, borderColor: Colors.border },
+  selectedTimeInfo: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+  selectedTimeValue: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  selectedTimeLabel: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textTertiary },
+  removeBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: Colors.missedLight, alignItems: "center", justifyContent: "center" },
+  subLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.textTertiary, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 },
+  presetsScroll: { flexDirection: "row", marginHorizontal: -24, paddingHorizontal: 24 },
+  presetChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border, marginRight: 8 },
+  presetChipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  presetChipText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.textSecondary },
+  presetChipTextActive: { color: Colors.primary, fontFamily: "Inter_600SemiBold" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalContent: { backgroundColor: Colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === "ios" ? 40 : 24 },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  modalDone: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.missed },
+  modalSubmit: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 15, marginTop: 20, alignItems: "center" },
+  modalSubmitText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.textInverse },
 });

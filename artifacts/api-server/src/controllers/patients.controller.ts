@@ -1,8 +1,8 @@
 import { Response } from "express";
 import { z } from "zod";
-import { db, patientsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { adminDb } from "../lib/firebase-admin";
 import { AuthRequest } from "../middlewares/authenticate.js";
+import { logger } from "../lib/logger.js";
 
 const createPatientSchema = z.object({
   name: z.string().min(2),
@@ -13,12 +13,20 @@ const createPatientSchema = z.object({
 
 const updatePatientSchema = createPatientSchema.partial();
 
+const COLLECTION = "patients";
+
 export async function getPatients(req: AuthRequest, res: Response): Promise<void> {
-  const patients = await db
-    .select()
-    .from(patientsTable)
-    .where(eq(patientsTable.userId, req.userId!));
-  res.json(patients);
+  try {
+    const snapshot = await adminDb.collection(COLLECTION)
+      .where("userId", "==", req.userId!)
+      .get();
+    
+    const patients = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    res.json(patients);
+  } catch (error) {
+    logger.error({ error, userId: req.userId }, "Failed to fetch patients");
+    res.status(500).json({ error: "FirestoreError", message: "Failed to fetch patients" });
+  }
 }
 
 export async function createPatient(req: AuthRequest, res: Response): Promise<void> {
@@ -28,29 +36,37 @@ export async function createPatient(req: AuthRequest, res: Response): Promise<vo
     return;
   }
 
-  const [patient] = await db
-    .insert(patientsTable)
-    .values({ ...parseResult.data, userId: req.userId! })
-    .returning();
+  try {
+    const docRef = await adminDb.collection(COLLECTION).add({
+      ...parseResult.data,
+      userId: req.userId!,
+      createdAt: new Date().toISOString(),
+    });
 
-  res.status(201).json(patient);
+    const doc = await docRef.get();
+    res.status(201).json({ id: doc.id, ...doc.data() });
+  } catch (error) {
+    logger.error({ error, userId: req.userId, body: req.body }, "Failed to create patient");
+    res.status(500).json({ error: "FirestoreError", message: "Failed to create patient" });
+  }
 }
 
 export async function getPatient(req: AuthRequest, res: Response): Promise<void> {
   const { patientId } = req.params;
 
-  const [patient] = await db
-    .select()
-    .from(patientsTable)
-    .where(and(eq(patientsTable.id, patientId!), eq(patientsTable.userId, req.userId!)))
-    .limit(1);
+  try {
+    const doc = await adminDb.collection(COLLECTION).doc(patientId).get();
+    
+    if (!doc.exists || doc.data()?.userId !== req.userId) {
+      res.status(404).json({ error: "NotFound", message: "Patient not found" });
+      return;
+    }
 
-  if (!patient) {
-    res.status(404).json({ error: "NotFound", message: "Patient not found" });
-    return;
+    res.json({ id: doc.id, ...doc.data() });
+  } catch (error) {
+    logger.error({ error, patientId, userId: req.userId }, "Failed to fetch dashboard");
+    res.status(500).json({ error: "FirestoreError", message: "Failed to fetch dashboard" });
   }
-
-  res.json(patient);
 }
 
 export async function updatePatient(req: AuthRequest, res: Response): Promise<void> {
@@ -62,32 +78,38 @@ export async function updatePatient(req: AuthRequest, res: Response): Promise<vo
     return;
   }
 
-  const [patient] = await db
-    .update(patientsTable)
-    .set(parseResult.data)
-    .where(and(eq(patientsTable.id, patientId!), eq(patientsTable.userId, req.userId!)))
-    .returning();
+  try {
+    const docRef = adminDb.collection(COLLECTION).doc(patientId);
+    const doc = await docRef.get();
 
-  if (!patient) {
-    res.status(404).json({ error: "NotFound", message: "Patient not found" });
-    return;
+    if (!doc.exists || doc.data()?.userId !== req.userId) {
+      res.status(404).json({ error: "NotFound", message: "Patient not found" });
+      return;
+    }
+
+    await docRef.update(parseResult.data);
+    const updated = await docRef.get();
+    res.json({ id: updated.id, ...updated.data() });
+  } catch (error) {
+    res.status(500).json({ error: "FirestoreError", message: "Failed to update patient" });
   }
-
-  res.json(patient);
 }
 
 export async function deletePatient(req: AuthRequest, res: Response): Promise<void> {
   const { patientId } = req.params;
 
-  const [deleted] = await db
-    .delete(patientsTable)
-    .where(and(eq(patientsTable.id, patientId!), eq(patientsTable.userId, req.userId!)))
-    .returning();
+  try {
+    const docRef = adminDb.collection(COLLECTION).doc(patientId);
+    const doc = await docRef.get();
 
-  if (!deleted) {
-    res.status(404).json({ error: "NotFound", message: "Patient not found" });
-    return;
+    if (!doc.exists || doc.data()?.userId !== req.userId) {
+      res.status(404).json({ error: "NotFound", message: "Patient not found" });
+      return;
+    }
+
+    await docRef.delete();
+    res.json({ success: true, message: "Patient deleted" });
+  } catch (error) {
+    res.status(500).json({ error: "FirestoreError", message: "Failed to delete patient" });
   }
-
-  res.json({ success: true, message: "Patient deleted" });
 }

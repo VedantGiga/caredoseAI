@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyToken } from "../utils/auth.js";
+import { adminAuth } from "../lib/firebase-admin";
 
 export interface AuthRequest extends Request {
   userId?: string;
   userEmail?: string;
 }
 
-export function authenticate(req: AuthRequest, res: Response, next: NextFunction): void {
+export async function authenticate(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -17,11 +17,11 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
   const token = authHeader.split(" ")[1];
 
   try {
-    const payload = verifyToken(token!);
-    req.userId = payload.userId;
-    req.userEmail = payload.email;
+    const decodedToken = await adminAuth.verifyIdToken(token!);
+    req.userId = decodedToken.uid;
+    req.userEmail = decodedToken.email;
     next();
-  } catch {
+  } catch (error) {
     res.status(401).json({ error: "Unauthorized", message: "Invalid or expired token" });
   }
 }

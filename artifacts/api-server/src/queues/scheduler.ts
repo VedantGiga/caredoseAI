@@ -1,10 +1,13 @@
 import cron from "node-cron";
-import { db, medicinesTable, patientsTable, activityLogsTable } from "@workspace/db";
-import { eq, and, gte, lte, isNull } from "drizzle-orm";
+import { adminDb } from "../lib/firebase-admin";
 import { makeReminderCall, registerCall } from "../services/twilio.service.js";
 import { logger } from "../lib/logger.js";
 
 let schedulerStarted = false;
+
+const MEDICINES_COLLECTION = "medicines";
+const PATIENTS_COLLECTION = "patients";
+const LOGS_COLLECTION = "activity_logs";
 
 export function startScheduler(): void {
   if (schedulerStarted) return;
@@ -25,38 +28,52 @@ async function checkAndFireReminders(): Promise<void> {
   const now = new Date();
   const windowStart = new Date(now);
   windowStart.setSeconds(0, 0);
+  windowStart.setMilliseconds(0);
   const windowEnd = new Date(windowStart.getTime() + 60_000);
 
   const todayStr = now.toISOString().split("T")[0]!;
 
-  const medicines = await db
-    .select({
-      medicine: medicinesTable,
-      patient: patientsTable,
-    })
-    .from(medicinesTable)
-    .innerJoin(patientsTable, eq(medicinesTable.patientId, patientsTable.id))
-    .where(
-      and(
-        eq(medicinesTable.isActive, true),
-        lte(medicinesTable.startDate, todayStr),
-      ),
-    );
+  try {
+    const medicinesSnapshot = await adminDb.collection(MEDICINES_COLLECTION)
+      .where("isActive", "==", true)
+      .where("startDate", "<=", todayStr)
+      .get();
 
-  for (const { medicine, patient } of medicines) {
-    if (medicine.endDate && medicine.endDate < todayStr) continue;
+    for (const medicineDoc of medicinesSnapshot.docs) {
+      const medicine = { id: medicineDoc.id, ...medicineDoc.data() } as any;
 
-    if (!shouldFireToday(medicine.frequency, medicine.startDate, todayStr)) continue;
+      if (medicine.endDate && medicine.endDate < todayStr) continue;
 
-    const times = medicine.times as Array<{ hour: number; minute: number; label?: string }>;
+      if (!shouldFireToday(medicine.frequency, medicine.startDate, todayStr)) continue;
 
-    for (const timeSlot of times) {
-      const scheduled = new Date();
-      scheduled.setHours(timeSlot.hour, timeSlot.minute, 0, 0);
+      const times = medicine.times as Array<{ hour: number; minute: number; label?: string }>;
 
-      if (scheduled >= windowStart && scheduled < windowEnd) {
-        await fireReminder(medicine, patient, scheduled);
+      for (const timeSlot of times) {
+        const scheduled = new Date();
+        scheduled.setHours(timeSlot.hour, timeSlot.minute, 0, 0);
+
+        if (scheduled >= windowStart && scheduled < windowEnd) {
+          // Fetch patient details
+          const patientDoc = await adminDb.collection(PATIENTS_COLLECTION).doc(medicine.patientId).get();
+          if (patientDoc.exists) {
+            const patient = { id: patientDoc.id, ...patientDoc.data() } as any;
+            await fireReminder(medicine, patient, scheduled);
+          }
+        }
       }
+    }
+  } catch (error: any) {
+    if (error.code === 5 || error.message?.includes("NOT_FOUND")) {
+      logger.error(
+        "Firestore Database NOT FOUND (Code 5). Please ensure you have created a Cloud Firestore database in Native Mode for your project 'caredoseai' in the Firebase Console: https://console.firebase.google.com/",
+      );
+    } else if (error.code === 9 || error.message?.includes("FAILED_PRECONDITION")) {
+      logger.error(
+        { error: error.message },
+        "Firestore INDEX MISSING (Code 9). This query requires a composite index. Please check your console logs or the Firebase Console to create the required index for the 'medicines' collection (isActive: ASC, startDate: ASC).",
+      );
+    } else {
+      logger.error({ error }, "Error checking reminders in Firestore");
     }
   }
 }
@@ -78,23 +95,20 @@ function shouldFireToday(
 }
 
 async function fireReminder(
-  medicine: typeof medicinesTable.$inferSelect,
-  patient: typeof patientsTable.$inferSelect,
+  medicine: any,
+  patient: any,
   scheduledTime: Date,
 ): Promise<void> {
-  const existing = await db
-    .select()
-    .from(activityLogsTable)
-    .where(
-      and(
-        eq(activityLogsTable.medicineId, medicine.id),
-        gte(activityLogsTable.scheduledTime, new Date(scheduledTime.getTime() - 30_000)),
-        lte(activityLogsTable.scheduledTime, new Date(scheduledTime.getTime() + 30_000)),
-      ),
-    )
-    .limit(1);
+  const scheduledTimeISO = scheduledTime.toISOString();
+  
+  // Check for existing log in ±30 seconds window
+  const existingSnapshot = await adminDb.collection(LOGS_COLLECTION)
+    .where("medicineId", "==", medicine.id)
+    .where("scheduledTime", "==", scheduledTimeISO)
+    .limit(1)
+    .get();
 
-  if (existing.length > 0) {
+  if (!existingSnapshot.empty) {
     logger.info(
       { medicineId: medicine.id, scheduledTime },
       "Reminder already fired for this slot — skipping",
@@ -102,45 +116,43 @@ async function fireReminder(
     return;
   }
 
-  const [log] = await db
-    .insert(activityLogsTable)
-    .values({
+  try {
+    const logRef = await adminDb.collection(LOGS_COLLECTION).add({
       patientId: medicine.patientId,
       medicineId: medicine.id,
       medicineName: medicine.name,
       dosage: medicine.dosage,
-      scheduledTime,
+      scheduledTime: scheduledTimeISO,
       status: "pending",
       source: null,
-    })
-    .returning();
-
-  if (!log) return;
-
-  logger.info(
-    { logId: log.id, patientName: patient.name, medicine: medicine.name },
-    "Firing medicine reminder call",
-  );
-
-  const callSid = await makeReminderCall(
-    patient.phone,
-    patient.name,
-    medicine.name,
-    medicine.dosage,
-    patient.language,
-  );
-
-  if (callSid) {
-    registerCall(callSid, {
-      logId: log.id,
-      patientId: patient.id,
-      medicineName: medicine.name,
     });
 
-    await db
-      .update(activityLogsTable)
-      .set({ callSid, source: "call" })
-      .where(eq(activityLogsTable.id, log.id));
+    const logId = logRef.id;
+
+    logger.info(
+      { logId, patientName: patient.name, medicine: medicine.name },
+      "Firing medicine reminder call",
+    );
+
+    const callSid = await makeReminderCall(
+      patient.phone,
+      patient.name,
+      medicine.name,
+      medicine.dosage,
+      patient.language,
+    );
+
+    if (callSid) {
+      registerCall(callSid, {
+        logId,
+        patientId: patient.id,
+        medicineName: medicine.name,
+      });
+
+      await logRef.update({ callSid, source: "call" });
+    }
+  } catch (error) {
+    logger.error({ error, medicineId: medicine.id }, "Failed to fire reminder");
   }
 }
 

@@ -16,8 +16,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
-import { authApi } from "@/lib/api";
+import Constants from "expo-constants";
 import { useAuthStore } from "@/store/authStore";
+import { auth, getGoogleSignin } from "@/lib/firebase";
+import { createUserWithEmailAndPassword, updateProfile, signInWithCredential, GoogleAuthProvider } from "firebase/auth";
+import Animated, { FadeInUp } from "react-native-reanimated";
+
+const isExpoGo = Constants.appOwnership === "expo";
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
@@ -41,17 +46,95 @@ export default function RegisterScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const syncAuth = async (firebaseUser: any, displayName?: string) => {
+    try {
+      const token = await firebaseUser.getIdToken();
+      setAuth({
+        id: firebaseUser.uid,
+        name: displayName || firebaseUser.displayName || "User",
+        email: firebaseUser.email || "",
+        photoURL: firebaseUser.photoURL || undefined,
+      }, token);
+      
+      // Trigger auto-creation/sync on server
+      try {
+        const { authApi } = require("@/lib/api");
+        await authApi.me();
+      } catch (e) {
+        console.error("Profile sync failed:", e);
+      }
+    } catch (e) {
+      console.error("Token fetch failed:", e);
+      setAuth({
+        id: firebaseUser.uid,
+        name: displayName || firebaseUser.displayName || "User",
+        email: firebaseUser.email || "",
+        photoURL: firebaseUser.photoURL || undefined,
+      });
+    }
+  };
+
   const handleRegister = async () => {
     if (!validate()) return;
     setLoading(true);
     try {
-      const res = await authApi.register(name.trim(), email.trim().toLowerCase(), password);
-      setAuth(res.token, res.user);
+      // 1. Create user in Firebase
+      const userCredential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      
+      // 2. Update profile with display name
+      await updateProfile(userCredential.user, {
+        displayName: name.trim()
+      });
+
+      // 3. Sync with local store
+      await syncAuth(userCredential.user, name.trim());
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)");
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Registration failed";
+    } catch (err: any) {
+      let message = "Registration failed";
+      if (err.code === "auth/email-already-in-use") message = "Email already in use";
+      if (err.code === "auth/invalid-email") message = "Invalid email format";
+      if (err.code === "auth/weak-password") message = "Password is too weak";
+      
       Alert.alert("Registration Failed", message);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleRegister = async () => {
+    if (isExpoGo) {
+      Alert.alert(
+        "Development Build Required",
+        "Google Sign-In requires a native module that isn't available in Expo Go. Please run this app as a Development Build (npx expo run:android/ios)."
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const GoogleSignin = getGoogleSignin();
+      if (!GoogleSignin) throw new Error("Google Sign-In failed to load");
+      
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+      
+      if (!idToken) throw new Error("No ID Token found");
+      
+      const credential = GoogleAuthProvider.credential(idToken);
+      const userCredential = await signInWithCredential(auth, credential);
+      
+      await syncAuth(userCredential.user);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/(tabs)");
+    } catch (err: any) {
+      console.log("Google Registration Error:", err);
+      if (err.code !== "7" && err.code !== "SIGN_IN_CANCELLED") {
+        Alert.alert("Google Registration Failed", "Could not sign up with Google.");
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setLoading(false);
@@ -81,7 +164,10 @@ export default function RegisterScreen() {
           <Text style={styles.subtitle}>Join CareDose AI to manage medicines</Text>
         </View>
 
-        <View style={styles.card}>
+        <Animated.View 
+          entering={FadeInUp.duration(1000).springify()}
+          style={styles.card}
+        >
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Full Name</Text>
             <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
@@ -148,120 +234,184 @@ export default function RegisterScreen() {
               <ActivityIndicator color={Colors.textInverse} />
             ) : (
               <Text style={styles.buttonText}>Create Account</Text>
-            )}
-          </TouchableOpacity>
+                )}
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.loginLink}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.loginText}>
-              Already have an account?{" "}
-              <Text style={styles.loginTextBold}>Sign in</Text>
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
-}
+              <View style={styles.divider}>
+                <View style={styles.line} />
+                <Text style={styles.dividerText}>or continue with</Text>
+                <View style={styles.line} />
+              </View>
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: Colors.background },
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-  },
-  backBtn: {
-    marginBottom: 24,
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  header: {
-    marginBottom: 28,
-  },
-  title: {
-    fontSize: 30,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-  },
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 24,
-    padding: 28,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  inputGroup: {
-    marginBottom: 18,
-  },
-  label: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.surfaceAlt,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-    borderWidth: 1.5,
-    borderColor: "transparent",
-  },
-  inputError: {
-    borderColor: Colors.error,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    color: Colors.text,
-  },
-  errorText: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.error,
-    marginTop: 4,
-  },
-  button: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 17,
-    alignItems: "center",
-    marginTop: 8,
-    marginBottom: 20,
-  },
-  buttonDisabled: { opacity: 0.7 },
-  buttonText: {
-    fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textInverse,
-  },
-  loginLink: {
-    alignItems: "center",
-  },
-  loginText: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-  },
-  loginTextBold: {
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.primary,
-  },
-});
+              <TouchableOpacity
+                style={styles.googleButton}
+                onPress={handleGoogleRegister}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <View style={styles.googleIconContainer}>
+                  <Feather name="log-in" size={20} color={Colors.text} />
+                </View>
+                <Text style={styles.googleButtonText}>Google</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.loginLink}
+                onPress={() => router.back()}
+              >
+                <Text style={styles.loginText}>
+                  Already have an account?{" "}
+                  <Text style={styles.loginTextBold}>Sign in</Text>
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      );
+    }
+
+    const styles = StyleSheet.create({
+      flex: { flex: 1, backgroundColor: Colors.background },
+      container: {
+        flexGrow: 1,
+        paddingHorizontal: 24,
+      },
+      backBtn: {
+        marginBottom: 24,
+        width: 40,
+        height: 40,
+        alignItems: "center",
+        justifyContent: "center",
+      },
+      header: {
+        marginBottom: 28,
+      },
+      title: {
+        fontSize: 30,
+        fontFamily: "Inter_700Bold",
+        color: Colors.text,
+        marginBottom: 6,
+      },
+      subtitle: {
+        fontSize: 15,
+        fontFamily: "Inter_400Regular",
+        color: Colors.textSecondary,
+      },
+      card: {
+        backgroundColor: Colors.surface,
+        borderRadius: 24,
+        padding: 28,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        elevation: 4,
+      },
+      inputGroup: {
+        marginBottom: 18,
+      },
+      label: {
+        fontSize: 14,
+        fontFamily: "Inter_600SemiBold",
+        color: Colors.text,
+        marginBottom: 8,
+      },
+      inputWrapper: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: Colors.surfaceAlt,
+        borderRadius: 14,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        gap: 12,
+        borderWidth: 1.5,
+        borderColor: "transparent",
+      },
+      inputError: {
+        borderColor: Colors.error,
+      },
+      input: {
+        flex: 1,
+        fontSize: 16,
+        fontFamily: "Inter_400Regular",
+        color: Colors.text,
+      },
+      errorText: {
+        fontSize: 12,
+        fontFamily: "Inter_400Regular",
+        color: Colors.error,
+        marginTop: 4,
+      },
+      button: {
+        backgroundColor: Colors.primary,
+        borderRadius: 18,
+        paddingVertical: 18,
+        alignItems: "center",
+        marginTop: 8,
+        marginBottom: 20,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 8,
+      },
+      buttonDisabled: { opacity: 0.7 },
+      buttonText: {
+        fontSize: 18,
+        fontFamily: "Inter_700Bold",
+        color: Colors.textInverse,
+      },
+      loginLink: {
+        alignItems: "center",
+      },
+      loginText: {
+        fontSize: 14,
+        fontFamily: "Inter_400Regular",
+        color: Colors.textSecondary,
+      },
+      loginTextBold: {
+        fontFamily: "Inter_600SemiBold",
+        color: Colors.primary,
+      },
+      divider: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginVertical: 24,
+        gap: 12,
+      },
+      line: {
+        flex: 1,
+        height: 1,
+        backgroundColor: Colors.border,
+        opacity: 0.5,
+      },
+      dividerText: {
+        fontSize: 13,
+        fontFamily: "Inter_400Regular",
+        color: Colors.textTertiary,
+        textTransform: "lowercase",
+      },
+      googleButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: Colors.surface,
+        borderWidth: 1.5,
+        borderColor: Colors.border,
+        borderRadius: 14,
+        paddingVertical: 15,
+        marginBottom: 24,
+        gap: 12,
+      },
+      googleIconContainer: {
+        width: 24,
+        height: 24,
+        alignItems: "center",
+        justifyContent: "center",
+      },
+      googleButtonText: {
+        fontSize: 16,
+        fontFamily: "Inter_600SemiBold",
+        color: Colors.text,
+      },
+    });
