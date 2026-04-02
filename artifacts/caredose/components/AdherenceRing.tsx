@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
 import { Colors } from "@/constants/colors";
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
   strokeWidth?: number;
 }
 
-export default function AdherenceRing({ percentage, size = 100, strokeWidth = 8 }: Props) {
+export default function AdherenceRing({ percentage, size = 100, strokeWidth = 10 }: Props) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
@@ -20,11 +20,17 @@ export default function AdherenceRing({ percentage, size = 100, strokeWidth = 8 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <Defs>
+          <LinearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={Colors.primary} />
+            <Stop offset="100%" stopColor={Colors.primaryDark} />
+          </LinearGradient>
+        </Defs>
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={Colors.border}
+          stroke="rgba(255, 255, 255, 0.06)"
           strokeWidth={strokeWidth}
           fill="transparent"
         />
@@ -43,7 +49,7 @@ export default function AdherenceRing({ percentage, size = 100, strokeWidth = 8 
         />
       </Svg>
       <View style={styles.labelContainer}>
-        <Text style={[styles.percentage, { color }]}>{Math.round(percentage)}%</Text>
+        <Text style={[styles.percentage, { color: Colors.text }]}>{Math.round(percentage)}%</Text>
         <Text style={styles.label}>Adherence</Text>
       </View>
     </View>
@@ -60,13 +66,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   percentage: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
+    fontSize: 24,
+    fontFamily: "DMSans_700Bold",
+    letterSpacing: -0.5,
   },
   label: {
     fontSize: 10,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textTertiary,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.textSecondary,
     marginTop: 2,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
 });

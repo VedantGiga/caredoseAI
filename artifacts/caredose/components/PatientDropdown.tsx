@@ -1,14 +1,14 @@
-import React, { useState } from "react";
+import React, { useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
-  FlatList,
-  Pressable,
+  Keyboard,
   Platform,
 } from "react-native";
+import { BottomSheetModal, BottomSheetFlatList, BottomSheetBackdrop } from "@gorhom/bottom-sheet";
+import { BlurView } from "expo-blur";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
@@ -22,21 +22,52 @@ interface Props {
   onAddPatient?: () => void;
 }
 
+const CustomBackground = ({ style }: any) => {
+  return (
+    <View style={[style, styles.sheetBackgroundOuter]}>
+      <BlurView
+        intensity={Platform.OS === "ios" ? 40 : 25}
+        tint="dark"
+        style={styles.sheetBackgroundBlur}
+      />
+    </View>
+  );
+};
+
 export default function PatientDropdown({ patients, selectedId, onSelect, onAddPatient }: Props) {
-  const [open, setOpen] = useState(false);
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ["50%", "75%"], []);
+
   const selectedPatient = patients.find((p) => p.id === selectedId);
+
+  const handlePresentModalPress = useCallback(() => {
+    Keyboard.dismiss();
+    bottomSheetModalRef.current?.present();
+  }, []);
 
   const handleSelect = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onSelect(id);
-    setOpen(false);
+    bottomSheetModalRef.current?.dismiss();
   };
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+      />
+    ),
+    []
+  );
 
   return (
     <>
       <TouchableOpacity
         style={styles.trigger}
-        onPress={() => setOpen(true)}
+        onPress={handlePresentModalPress}
         activeOpacity={0.85}
       >
         {selectedPatient ? (
@@ -61,70 +92,68 @@ export default function PatientDropdown({ patients, selectedId, onSelect, onAddP
         <Feather name="chevron-down" size={18} color={Colors.textSecondary} />
       </TouchableOpacity>
 
-      <Modal
-        visible={open}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setOpen(false)}
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        index={1}
+        snapPoints={snapPoints}
+        backdropComponent={renderBackdrop}
+        backgroundComponent={CustomBackground}
+        handleIndicatorStyle={styles.sheetHandle}
       >
-        <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
-          <View style={styles.sheet}>
-            <View style={styles.sheetHandle} />
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Select Patient</Text>
-              <TouchableOpacity onPress={() => setOpen(false)}>
-                <Feather name="x" size={22} color={Colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>Select Patient</Text>
+          <TouchableOpacity onPress={() => bottomSheetModalRef.current?.dismiss()}>
+            <Feather name="x" size={22} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
 
-            <FlatList
-              data={patients}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.patientRow,
-                    item.id === selectedId && styles.patientRowActive,
-                  ]}
-                  onPress={() => handleSelect(item.id)}
-                  activeOpacity={0.8}
-                >
-                  <PatientAvatar name={item.name} size={46} fontSize={17} />
-                  <View style={styles.patientRowInfo}>
-                    <Text style={styles.patientRowName}>{item.name}</Text>
-                    <Text style={styles.patientRowMeta}>
-                      Age {item.age} · {item.language.charAt(0).toUpperCase() + item.language.slice(1)}
-                    </Text>
-                    <View style={styles.patientRowPhone}>
-                      <Feather name="phone" size={12} color={Colors.primary} />
-                      <Text style={styles.patientRowPhoneText}>{item.phone}</Text>
-                    </View>
-                  </View>
-                  {item.id === selectedId && (
-                    <Feather name="check-circle" size={22} color={Colors.primary} />
-                  )}
-                </TouchableOpacity>
+        <BottomSheetFlatList
+          data={patients}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.patientRow,
+                item.id === selectedId && styles.patientRowActive,
+              ]}
+              onPress={() => handleSelect(item.id)}
+              activeOpacity={0.8}
+            >
+              <PatientAvatar name={item.name} size={46} fontSize={17} />
+              <View style={styles.patientRowInfo}>
+                <Text style={styles.patientRowName}>{item.name}</Text>
+                <Text style={styles.patientRowMeta}>
+                  Age {item.age} · {item.language.charAt(0).toUpperCase() + item.language.slice(1)}
+                </Text>
+                <View style={styles.patientRowPhone}>
+                  <Feather name="phone" size={12} color={Colors.primary} />
+                  <Text style={styles.patientRowPhoneText}>{item.phone}</Text>
+                </View>
+              </View>
+              {item.id === selectedId && (
+                <Feather name="check-circle" size={22} color={Colors.primary} />
               )}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-              ListFooterComponent={
-                <TouchableOpacity
-                  style={styles.addPatientRow}
-                  onPress={() => {
-                    setOpen(false);
-                    onAddPatient?.();
-                  }}
-                >
-                  <View style={styles.addPatientIcon}>
-                    <Feather name="user-plus" size={18} color={Colors.primary} />
-                  </View>
-                  <Text style={styles.addPatientText}>Add New Patient</Text>
-                  <Feather name="chevron-right" size={16} color={Colors.primary} />
-                </TouchableOpacity>
-              }
-            />
-          </View>
-        </Pressable>
-      </Modal>
+            </TouchableOpacity>
+          )}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ListFooterComponent={
+            <TouchableOpacity
+              style={styles.addPatientRow}
+              onPress={() => {
+                bottomSheetModalRef.current?.dismiss();
+                onAddPatient?.();
+              }}
+            >
+              <View style={styles.addPatientIcon}>
+                <Feather name="user-plus" size={18} color={Colors.primary} />
+              </View>
+              <Text style={styles.addPatientText}>Add New Patient</Text>
+              <Feather name="chevron-right" size={16} color={Colors.primary} />
+            </TouchableOpacity>
+          }
+          contentContainerStyle={{ paddingBottom: 40 }}
+        />
+      </BottomSheetModal>
     </>
   );
 }
@@ -153,14 +182,14 @@ const styles = StyleSheet.create({
   },
   triggerLabel: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textTertiary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   triggerName: {
     fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.text,
     marginTop: 1,
   },
@@ -172,26 +201,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: Colors.background,
+  sheetBackgroundOuter: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: "75%",
-    paddingBottom: Platform.OS === "ios" ? 34 : 24,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: Colors.glass.borderElevated,
+    backgroundColor: Colors.background, // Fallback for very intense blurs on some androids
+  },
+  sheetBackgroundBlur: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
   sheetHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
     backgroundColor: Colors.border,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 8,
+    width: 40,
   },
   sheetHeader: {
     flexDirection: "row",
@@ -201,10 +225,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
+    marginBottom: 8,
   },
   sheetTitle: {
     fontSize: 18,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "DMSans_700Bold",
     color: Colors.text,
   },
   patientRow: {
@@ -222,13 +247,13 @@ const styles = StyleSheet.create({
   },
   patientRowName: {
     fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.text,
     marginBottom: 2,
   },
   patientRowMeta: {
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textSecondary,
     marginBottom: 3,
   },
@@ -239,7 +264,7 @@ const styles = StyleSheet.create({
   },
   patientRowPhoneText: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "DMSans_500Medium",
     color: Colors.primary,
   },
   separator: {
@@ -261,14 +286,14 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: "rgba(52, 211, 153, 0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
   addPatientText: {
     flex: 1,
     fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.primary,
   },
 });

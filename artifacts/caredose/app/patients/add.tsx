@@ -64,7 +64,6 @@ export default function AddPatientScreen() {
     const ageNum = parseInt(age, 10);
     if (isNaN(ageNum) || ageNum < 1 || ageNum > 150) newErrors.age = "Enter a valid age (1-150)";
     
-    // Validate Indian phone number (10 digits)
     const phoneClean = phone.trim().replace(/\s/g, "");
     if (phoneClean.length !== 10 || !/^\d+$/.test(phoneClean)) {
       newErrors.phone = "Enter a valid 10-digit mobile number";
@@ -104,7 +103,7 @@ export default function AddPatientScreen() {
 
         <View style={styles.iconSection}>
           <View style={styles.iconBg}>
-            <Feather name="user-plus" size={32} color={Colors.primary} />
+            <Feather name="user-plus" size={28} color={Colors.primary} />
           </View>
           <Text style={styles.pageSubtitle}>
             Add a patient to manage their medicine schedule and receive AI call reminders.
@@ -115,7 +114,7 @@ export default function AddPatientScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Full Name</Text>
             <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
-              <Feather name="user" size={18} color={Colors.textTertiary} />
+              <Feather name="user" size={16} color={Colors.textTertiary} />
               <TextInput
                 style={styles.input}
                 placeholder="Patient's full name"
@@ -131,7 +130,7 @@ export default function AddPatientScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Age</Text>
             <View style={[styles.inputWrapper, errors.age && styles.inputError]}>
-              <Feather name="calendar" size={18} color={Colors.textTertiary} />
+              <Feather name="calendar" size={16} color={Colors.textTertiary} />
               <TextInput
                 style={styles.input}
                 placeholder="e.g. 68"
@@ -205,10 +204,10 @@ export default function AddPatientScreen() {
           activeOpacity={0.85}
         >
           {isPending ? (
-            <ActivityIndicator color={Colors.textInverse} />
+            <ActivityIndicator color={Colors.background} />
           ) : (
             <>
-              <Feather name="user-plus" size={18} color={Colors.textInverse} />
+              <Feather name="user-plus" size={18} color={Colors.background} />
               <Text style={styles.buttonText}>Add Patient</Text>
             </>
           )}
@@ -234,8 +233,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   navTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 17,
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.text,
   },
   iconSection: {
@@ -243,17 +242,19 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   iconBg: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(52, 211, 153, 0.2)",
   },
   pageSubtitle: {
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textSecondary,
     textAlign: "center",
     lineHeight: 22,
@@ -266,27 +267,29 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
+    fontSize: 13,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.textSecondary,
     marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   hint: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textTertiary,
     marginBottom: 8,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.surface,
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 12,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
   inputError: {
     borderColor: Colors.error,
@@ -294,27 +297,27 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.text,
   },
   errorText: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.error,
     marginTop: 4,
   },
   languageGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
   languageChip: {
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 30,
-    backgroundColor: Colors.surface,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    backgroundColor: Colors.glass.background,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
   languageChipActive: {
     borderColor: Colors.primary,
@@ -322,12 +325,12 @@ const styles = StyleSheet.create({
   },
   languageChipText: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "DMSans_500Medium",
     color: Colors.textSecondary,
   },
   languageChipTextActive: {
     color: Colors.primary,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
   },
   prefixContainer: {
     flexDirection: "row",
@@ -336,7 +339,7 @@ const styles = StyleSheet.create({
   },
   prefixText: {
     fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.text,
   },
   divider: {
@@ -346,22 +349,17 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: Colors.primary,
-    borderRadius: 18,
+    borderRadius: 16,
     paddingVertical: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 5,
   },
   buttonDisabled: { opacity: 0.7 },
   buttonText: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    color: Colors.textInverse,
+    fontSize: 17,
+    fontFamily: "DMSans_700Bold",
+    color: Colors.background,
   },
 });

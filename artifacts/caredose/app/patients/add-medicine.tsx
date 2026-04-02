@@ -189,7 +189,7 @@ export default function AddMedicineScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Medicine Name</Text>
             <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
-              <Feather name="package" size={18} color={Colors.textTertiary} />
+              <Feather name="package" size={16} color={Colors.textTertiary} />
               <TextInput
                 style={styles.input}
                 placeholder="e.g. Amlodipine"
@@ -205,7 +205,7 @@ export default function AddMedicineScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Dosage</Text>
             <View style={[styles.inputWrapper, errors.dosage && styles.inputError]}>
-              <Feather name="activity" size={18} color={Colors.textTertiary} />
+              <Feather name="activity" size={16} color={Colors.textTertiary} />
               <TextInput
                 style={styles.input}
                 placeholder="e.g. 5mg, 1 tablet"
@@ -251,7 +251,7 @@ export default function AddMedicineScreen() {
                   setShowPicker(true);
                 }}
               >
-                <Feather name="plus-circle" size={16} color={Colors.primary} />
+                <Feather name="plus-circle" size={14} color={Colors.primary} />
                 <Text style={styles.addTimeBtnText}>Add Time</Text>
               </TouchableOpacity>
             </View>
@@ -271,7 +271,7 @@ export default function AddMedicineScreen() {
                       onPress={() => removeTime(time.hour, time.minute)}
                       style={styles.removeBtn}
                     >
-                      <Feather name="x" size={16} color={Colors.missed} />
+                      <Feather name="x" size={14} color={Colors.missed} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -341,10 +341,10 @@ export default function AddMedicineScreen() {
           activeOpacity={0.85}
         >
           {isPending ? (
-            <ActivityIndicator color={Colors.textInverse} />
+            <ActivityIndicator color={Colors.background} />
           ) : (
             <>
-              <Feather name="plus-circle" size={18} color={Colors.textInverse} />
+              <Feather name="plus-circle" size={18} color={Colors.background} />
               <Text style={styles.buttonText}>Add Medicine</Text>
             </>
           )}
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  navTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  navTitle: { fontSize: 17, fontFamily: "DMSans_600SemiBold", color: Colors.text },
   patientBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -374,11 +374,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(52, 211, 153, 0.2)",
   },
   patientBannerText: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: Colors.primaryDark,
+    fontFamily: "DMSans_500Medium",
+    color: Colors.primary,
   },
   errorBanner: {
     backgroundColor: Colors.missedLight,
@@ -389,57 +391,164 @@ const styles = StyleSheet.create({
   },
   errorBannerText: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "DMSans_500Medium",
     color: Colors.missed,
   },
   form: { marginBottom: 24 },
   inputGroup: { marginBottom: 20 },
-  label: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text, marginBottom: 4 },
-  hint: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textTertiary, marginBottom: 8 },
+  label: {
+    fontSize: 13,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.textSecondary,
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  hint: {
+    fontSize: 12,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.textTertiary,
+    marginBottom: 8,
+  },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.surface,
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 12,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
   inputError: { borderColor: Colors.error },
-  input: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", color: Colors.text },
-  errorText: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.error, marginTop: 4 },
-  frequencyRow: { flexDirection: "row", gap: 10 },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.text,
+  },
+  errorText: {
+    fontSize: 12,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.error,
+    marginTop: 4,
+  },
+  frequencyRow: { flexDirection: "row", gap: 8 },
   freqChip: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: Colors.surface,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    backgroundColor: Colors.glass.background,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
     alignItems: "center",
   },
-  freqChipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  freqText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.textSecondary },
-  freqTextActive: { color: Colors.primary, fontFamily: "Inter_600SemiBold" },
-  timesGrid: { gap: 10 },
-  timeChip: {
+  freqChipActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  freqText: {
+    fontSize: 13,
+    fontFamily: "DMSans_500Medium",
+    color: Colors.textSecondary,
+  },
+  freqTextActive: {
+    color: Colors.primary,
+    fontFamily: "DMSans_600SemiBold",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginBottom: 16,
+  },
+  addTimeBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    backgroundColor: Colors.surface,
+    gap: 6,
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(52, 211, 153, 0.2)",
+  },
+  addTimeBtnText: {
+    fontSize: 13,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.primary,
+  },
+  selectedTimesGrid: { gap: 10, marginBottom: 20 },
+  selectedTimeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.glass.background,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
-  timeChipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  timeLabel: { fontSize: 15, fontFamily: "Inter_500Medium", color: Colors.text },
-  timeLabelActive: { color: Colors.primaryDark },
-  timeValue: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textTertiary, marginTop: 1 },
-  timeValueActive: { color: Colors.primary },
+  selectedTimeInfo: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+  },
+  selectedTimeValue: {
+    fontSize: 17,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.text,
+  },
+  selectedTimeLabel: {
+    fontSize: 13,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.textTertiary,
+  },
+  removeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: Colors.missedLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  subLabel: {
+    fontSize: 11,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.textTertiary,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  presetsScroll: {
+    flexDirection: "row",
+    marginHorizontal: -24,
+    paddingHorizontal: 24,
+  },
+  presetChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: Colors.glass.background,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    marginRight: 8,
+  },
+  presetChipActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  presetChipText: {
+    fontSize: 13,
+    fontFamily: "DMSans_500Medium",
+    color: Colors.textSecondary,
+  },
+  presetChipTextActive: {
+    color: Colors.primary,
+    fontFamily: "DMSans_600SemiBold",
+  },
   button: {
     backgroundColor: Colors.primary,
     borderRadius: 16,
@@ -450,27 +559,51 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   buttonDisabled: { opacity: 0.7 },
-  buttonText: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: Colors.textInverse },
-  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 },
-  addTimeBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primaryLight, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
-  addTimeBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.primaryDark },
-  selectedTimesGrid: { gap: 12, marginBottom: 20 },
-  selectedTimeCard: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: Colors.surface, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1.5, borderColor: Colors.border },
-  selectedTimeInfo: { flexDirection: "row", alignItems: "baseline", gap: 8 },
-  selectedTimeValue: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: Colors.text },
-  selectedTimeLabel: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textTertiary },
-  removeBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: Colors.missedLight, alignItems: "center", justifyContent: "center" },
-  subLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.textTertiary, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 },
-  presetsScroll: { flexDirection: "row", marginHorizontal: -24, paddingHorizontal: 24 },
-  presetChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border, marginRight: 8 },
-  presetChipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  presetChipText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.textSecondary },
-  presetChipTextActive: { color: Colors.primary, fontFamily: "Inter_600SemiBold" },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  modalContent: { backgroundColor: Colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === "ios" ? 40 : 24 },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  modalTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: Colors.text },
-  modalDone: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.missed },
-  modalSubmit: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 15, marginTop: 20, alignItems: "center" },
-  modalSubmitText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.textInverse },
+  buttonText: {
+    fontSize: 17,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.background,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#1C1C1E",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.text,
+  },
+  modalDone: {
+    fontSize: 16,
+    fontFamily: "DMSans_500Medium",
+    color: Colors.missed,
+  },
+  modalSubmit: {
+    backgroundColor: Colors.primary,
+    borderRadius: 14,
+    paddingVertical: 15,
+    marginTop: 20,
+    alignItems: "center",
+  },
+  modalSubmitText: {
+    fontSize: 16,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.background,
+  },
 });

@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
 } from "react-native";
+import { BlurView } from "expo-blur";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -15,6 +16,7 @@ import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
 import { useAuthStore } from "@/store/authStore";
 import PatientAvatar from "@/components/PatientAvatar";
+import ScreenBackground from "@/components/ScreenBackground";
 
 interface SettingItemProps {
   icon: keyof typeof Feather.glyphMap;
@@ -26,16 +28,26 @@ interface SettingItemProps {
 
 function SettingItem({ icon, label, onPress, danger, rightText }: SettingItemProps) {
   return (
-    <TouchableOpacity style={styles.settingItem} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.settingItem} onPress={onPress} activeOpacity={0.6}>
       <View style={[styles.settingIconWrapper, danger && { backgroundColor: Colors.missedLight }]}>
-        <Feather name={icon} size={18} color={danger ? Colors.missed : Colors.textSecondary} />
+        <Feather name={icon} size={16} color={danger ? Colors.missed : Colors.textSecondary} />
       </View>
       <Text style={[styles.settingLabel, danger && styles.dangerText]}>{label}</Text>
       <View style={styles.settingRight}>
         {rightText && <Text style={styles.settingRightText}>{rightText}</Text>}
-        <Feather name="chevron-right" size={16} color={Colors.textTertiary} />
+        <Feather name="chevron-right" size={14} color={Colors.textTertiary} />
       </View>
     </TouchableOpacity>
+  );
+}
+
+function GlassSection({ children }: { children: React.ReactNode }) {
+  return (
+    <View style={styles.glassSectionOuter}>
+      <BlurView intensity={Platform.OS === "ios" ? 20 : 10} tint="dark" style={styles.glassSectionBlur}>
+        {children}
+      </BlurView>
+    </View>
   );
 }
 
@@ -62,93 +74,99 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: bottomPad + 100 }}
-    >
-      <View style={[styles.header, { paddingTop: topPad + 16 }]}>
-        <Text style={styles.title}>Profile</Text>
-      </View>
-
-      <View style={styles.profileCard}>
-        <PatientAvatar name={user?.name ?? "User"} size={72} fontSize={26} />
-        <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{user?.name}</Text>
-          <Text style={styles.profileEmail}>{user?.email}</Text>
+    <ScreenBackground variant="warm">
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: bottomPad + 100 }}
+      >
+        <View style={[styles.header, { paddingTop: topPad + 16 }]}>
+          <Text style={styles.title}>Profile</Text>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Patients</Text>
-        <View style={styles.card}>
-          <SettingItem
-            icon="users"
-            label="Manage Patients"
-            onPress={() => router.push("/patients/list")}
-          />
-          <SettingItem
-            icon="user-plus"
-            label="Add New Patient"
-            onPress={() => router.push("/patients/add")}
-          />
+        {/* Glass Profile Card */}
+        <View style={styles.profileCardOuter}>
+          <BlurView intensity={Platform.OS === "ios" ? 25 : 12} tint="dark" style={styles.profileCardBlur}>
+            <View style={styles.profileCardInner}>
+              <PatientAvatar name={user?.name ?? "User"} size={68} fontSize={24} />
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>{user?.name}</Text>
+                <Text style={styles.profileEmail}>{user?.email}</Text>
+              </View>
+            </View>
+          </BlurView>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Reminders</Text>
-        <View style={styles.card}>
-          <SettingItem
-            icon="phone"
-            label="Call Settings"
-            onPress={() => Alert.alert("Coming Soon", "Configure call settings in a future update")}
-            rightText="Twilio"
-          />
-          <SettingItem
-            icon="bell"
-            label="Notification Preferences"
-            onPress={() => Alert.alert("Coming Soon", "Notification settings coming soon")}
-          />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Patients</Text>
+          <GlassSection>
+            <SettingItem
+              icon="users"
+              label="Manage Patients"
+              onPress={() => router.push("/patients/list")}
+            />
+            <SettingItem
+              icon="user-plus"
+              label="Add New Patient"
+              onPress={() => router.push("/patients/add")}
+            />
+          </GlassSection>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account</Text>
-        <View style={styles.card}>
-          <SettingItem
-            icon="info"
-            label="About CareDose AI"
-            onPress={() =>
-              Alert.alert(
-                "CareDose AI",
-                "Version 1.0.0\n\nSmart Medicine Assistant for Elderly\n\nPowered by AI voice calls and intelligent scheduling.",
-              )
-            }
-          />
-          <SettingItem
-            icon="log-out"
-            label="Sign Out"
-            onPress={handleLogout}
-            danger
-          />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Reminders</Text>
+          <GlassSection>
+            <SettingItem
+              icon="phone"
+              label="Call Settings"
+              onPress={() => Alert.alert("Coming Soon", "Configure call settings in a future update")}
+              rightText="Twilio"
+            />
+            <SettingItem
+              icon="bell"
+              label="Notification Preferences"
+              onPress={() => Alert.alert("Coming Soon", "Notification settings coming soon")}
+            />
+          </GlassSection>
         </View>
-      </View>
 
-      <View style={styles.footer}>
-        <View style={styles.footerLogo}>
-          <Feather name="heart" size={14} color={Colors.primary} />
-          <Text style={styles.footerText}>CareDose AI</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <GlassSection>
+            <SettingItem
+              icon="info"
+              label="About CareDose AI"
+              onPress={() =>
+                Alert.alert(
+                  "CareDose AI",
+                  "Version 1.0.0\n\nSmart Medicine Assistant for Elderly\n\nPowered by AI voice calls and intelligent scheduling.",
+                )
+              }
+            />
+            <SettingItem
+              icon="log-out"
+              label="Sign Out"
+              onPress={handleLogout}
+              danger
+            />
+          </GlassSection>
         </View>
-        <Text style={styles.footerVersion}>Version 1.0.0</Text>
-      </View>
-    </ScrollView>
+
+        <View style={styles.footer}>
+          <View style={styles.footerLogo}>
+            <Feather name="heart" size={13} color={Colors.primary} />
+            <Text style={styles.footerText}>CareDose AI</Text>
+          </View>
+          <Text style={styles.footerVersion}>Version 1.0.0</Text>
+        </View>
+      </ScrollView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollView: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   header: {
     paddingHorizontal: 24,
@@ -156,36 +174,44 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
+    fontFamily: "DMSerifDisplay_400Regular",
+    color: Colors.textWarm,
   },
-  profileCard: {
+  // Glass Profile Card
+  profileCardOuter: {
     marginHorizontal: 24,
-    backgroundColor: Colors.surface,
-    borderRadius: 20,
+    borderRadius: 22,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: Colors.glass.borderElevated,
+    marginBottom: 28,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 6,
+  },
+  profileCardBlur: {
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  profileCardInner: {
     padding: 24,
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-    marginBottom: 24,
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
     fontSize: 22,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "DMSans_700Bold",
     color: Colors.text,
     marginBottom: 4,
   },
   profileEmail: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textSecondary,
   },
   section: {
@@ -193,22 +219,22 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.textTertiary,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 1.2,
     marginBottom: 10,
   },
-  card: {
-    backgroundColor: Colors.surface,
+  // Glass Setting Sections
+  glassSectionOuter: {
     borderRadius: 18,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+  },
+  glassSectionBlur: {
+    backgroundColor: "rgba(255,255,255,0.03)",
   },
   settingItem: {
     flexDirection: "row",
@@ -220,17 +246,17 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.borderLight,
   },
   settingIconWrapper: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: 10,
-    backgroundColor: Colors.surfaceAlt,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
     alignItems: "center",
     justifyContent: "center",
   },
   settingLabel: {
     flex: 1,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    fontFamily: "DMSans_400Regular",
     color: Colors.text,
   },
   dangerText: {
@@ -242,13 +268,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   settingRightText: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    fontFamily: "DMSans_400Regular",
     color: Colors.textTertiary,
   },
   footer: {
     alignItems: "center",
-    paddingVertical: 24,
+    paddingVertical: 28,
     gap: 4,
   },
   footerLogo: {
@@ -258,12 +284,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.textSecondary,
   },
   footerVersion: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textTertiary,
   },
 });

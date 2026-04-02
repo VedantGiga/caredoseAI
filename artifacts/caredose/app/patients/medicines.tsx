@@ -42,7 +42,7 @@ function MedicineCard({
     <View style={[styles.medicineCard, !medicine.isActive && styles.medicineCardInactive]}>
       <View style={styles.medicineCardLeft}>
         <View style={[styles.medicineIcon, !medicine.isActive && styles.medicineIconInactive]}>
-          <Feather name="package" size={18} color={medicine.isActive ? Colors.primary : Colors.textTertiary} />
+          <Feather name="package" size={16} color={medicine.isActive ? Colors.primary : Colors.textTertiary} />
         </View>
       </View>
       <View style={styles.medicineCardContent}>
@@ -56,11 +56,11 @@ function MedicineCard({
         </View>
         <Text style={styles.medicineDosage}>{medicine.dosage}</Text>
         <View style={styles.medicineMeta}>
-          <Feather name="clock" size={12} color={Colors.textTertiary} />
+          <Feather name="clock" size={11} color={Colors.textTertiary} />
           <Text style={styles.medicineMetaText}>{formatTimes(medicine.times)}</Text>
         </View>
         <View style={styles.medicineMeta}>
-          <Feather name="refresh-cw" size={12} color={Colors.textTertiary} />
+          <Feather name="refresh-cw" size={11} color={Colors.textTertiary} />
           <Text style={styles.medicineMetaText}>
             {medicine.frequency.replace("_", " ")}
           </Text>
@@ -70,12 +70,12 @@ function MedicineCard({
         <TouchableOpacity style={styles.actionBtn} onPress={onToggle}>
           <Feather
             name={medicine.isActive ? "pause-circle" : "play-circle"}
-            size={22}
+            size={20}
             color={medicine.isActive ? Colors.warning : Colors.taken}
           />
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={onDelete}>
-          <Feather name="trash-2" size={20} color={Colors.missed} />
+          <Feather name="trash-2" size={18} color={Colors.missed} />
         </TouchableOpacity>
       </View>
     </View>
@@ -155,7 +155,7 @@ export default function MedicinesScreen() {
           style={styles.addBtn}
           onPress={() => router.push("/patients/add-medicine")}
         >
-          <Feather name="plus" size={22} color={Colors.primary} />
+          <Feather name="plus" size={20} color={Colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -165,7 +165,9 @@ export default function MedicinesScreen() {
         </View>
       ) : medicines.length === 0 ? (
         <View style={styles.empty}>
-          <Feather name="package" size={52} color={Colors.border} />
+          <View style={styles.emptyIconBg}>
+            <Feather name="package" size={32} color={Colors.textTertiary} />
+          </View>
           <Text style={styles.emptyTitle}>No Medicines Yet</Text>
           <Text style={styles.emptyText}>
             Add medicines to start scheduling AI call reminders
@@ -174,7 +176,7 @@ export default function MedicinesScreen() {
             style={styles.emptyBtn}
             onPress={() => router.push("/patients/add-medicine")}
           >
-            <Feather name="plus" size={16} color={Colors.textInverse} />
+            <Feather name="plus" size={16} color={Colors.background} />
             <Text style={styles.emptyBtnText}>Add Medicine</Text>
           </TouchableOpacity>
         </View>
@@ -201,7 +203,7 @@ export default function MedicinesScreen() {
         onPress={() => router.push("/patients/add-medicine")}
         activeOpacity={0.85}
       >
-        <Feather name="plus" size={24} color={Colors.textInverse} />
+        <Feather name="plus" size={24} color={Colors.background} />
       </TouchableOpacity>
     </View>
   );
@@ -218,9 +220,27 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 22, fontFamily: "Inter_700Bold", color: Colors.text },
-  subtitle: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2 },
-  addBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  title: {
+    fontSize: 22,
+    fontFamily: "DMSerifDisplay_400Regular",
+    color: Colors.textWarm,
+  },
+  subtitle: {
+    fontSize: 13,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  addBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.glass.background,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
   empty: {
     flex: 1,
@@ -229,10 +249,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     gap: 12,
   },
-  emptyTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text },
+  emptyIconBg: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.glass.background,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontFamily: "DMSerifDisplay_400Regular",
+    color: Colors.textWarm,
+  },
   emptyText: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textSecondary,
     textAlign: "center",
   },
@@ -248,33 +283,30 @@ const styles = StyleSheet.create({
   },
   emptyBtnText: {
     fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textInverse,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.background,
   },
   list: { paddingHorizontal: 20, paddingTop: 8 },
   medicineCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.glass.background,
     borderRadius: 16,
     flexDirection: "row",
     marginBottom: 10,
     padding: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
-  medicineCardInactive: { opacity: 0.6 },
+  medicineCardInactive: { opacity: 0.5 },
   medicineCardLeft: { marginRight: 12 },
   medicineIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
   },
-  medicineIconInactive: { backgroundColor: Colors.surfaceAlt },
+  medicineIconInactive: { backgroundColor: "rgba(255,255,255,0.04)" },
   medicineCardContent: { flex: 1 },
   medicineCardHeader: {
     flexDirection: "row",
@@ -282,17 +314,37 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 3,
   },
-  medicineName: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  medicineName: {
+    fontSize: 16,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.text,
+  },
   inactiveBadge: {
-    backgroundColor: Colors.surfaceAlt,
+    backgroundColor: "rgba(255,255,255,0.04)",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
-  inactiveBadgeText: { fontSize: 11, fontFamily: "Inter_500Medium", color: Colors.textTertiary },
-  medicineDosage: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginBottom: 6 },
+  inactiveBadgeText: {
+    fontSize: 10,
+    fontFamily: "DMSans_500Medium",
+    color: Colors.textTertiary,
+  },
+  medicineDosage: {
+    fontSize: 13,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.textSecondary,
+    marginBottom: 6,
+  },
   medicineMeta: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 3 },
-  medicineMetaText: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textTertiary, textTransform: "capitalize" },
+  medicineMetaText: {
+    fontSize: 12,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.textTertiary,
+    textTransform: "capitalize",
+  },
   medicineCardActions: { justifyContent: "space-between", paddingLeft: 8 },
   actionBtn: { padding: 4 },
   fab: {
@@ -307,7 +359,7 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 12,
+    elevation: 8,
   },
 });

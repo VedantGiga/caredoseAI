@@ -70,7 +70,7 @@ export default function PatientListScreen() {
           style={styles.addBtn}
           onPress={() => router.push("/patients/add")}
         >
-          <Feather name="user-plus" size={20} color={Colors.primary} />
+          <Feather name="user-plus" size={18} color={Colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -80,7 +80,9 @@ export default function PatientListScreen() {
         </View>
       ) : patients.length === 0 ? (
         <View style={styles.empty}>
-          <Feather name="users" size={52} color={Colors.border} />
+          <View style={styles.emptyIconBg}>
+            <Feather name="users" size={32} color={Colors.textTertiary} />
+          </View>
           <Text style={styles.emptyTitle}>No Patients</Text>
           <Text style={styles.emptyText}>Add patients to manage their medicine schedule</Text>
           <TouchableOpacity
@@ -106,20 +108,20 @@ export default function PatientListScreen() {
               }}
               activeOpacity={0.8}
             >
-              <PatientAvatar name={item.name} size={52} fontSize={18} />
+              <PatientAvatar name={item.name} size={48} fontSize={17} />
               <View style={styles.patientInfo}>
                 <Text style={styles.patientName}>{item.name}</Text>
                 <View style={styles.patientMeta}>
-                  <Feather name="user" size={12} color={Colors.textTertiary} />
+                  <Feather name="user" size={11} color={Colors.textTertiary} />
                   <Text style={styles.patientMetaText}>Age {item.age}</Text>
                   <Text style={styles.dot}>·</Text>
-                  <Feather name="globe" size={12} color={Colors.textTertiary} />
+                  <Feather name="globe" size={11} color={Colors.textTertiary} />
                   <Text style={styles.patientMetaText}>
                     {item.language.charAt(0).toUpperCase() + item.language.slice(1)}
                   </Text>
                 </View>
                 <View style={styles.patientPhone}>
-                  <Feather name="phone" size={12} color={Colors.textTertiary} />
+                  <Feather name="phone" size={11} color={Colors.textTertiary} />
                   <Text style={styles.patientMetaText}>
                     {item.phone.replace(/(\+91)(\d{5})(\d{5})/, "$1 $2 $3")}
                   </Text>
@@ -130,7 +132,7 @@ export default function PatientListScreen() {
                 onPress={() => handleDelete(item)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Feather name="trash-2" size={18} color={Colors.missed} />
+                <Feather name="trash-2" size={16} color={Colors.missed} />
               </TouchableOpacity>
             </TouchableOpacity>
           )}
@@ -153,8 +155,21 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 22, fontFamily: "Inter_700Bold", color: Colors.text },
-  addBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  title: {
+    fontSize: 22,
+    fontFamily: "DMSerifDisplay_400Regular",
+    color: Colors.textWarm,
+  },
+  addBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.glass.background,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
   empty: {
     flex: 1,
@@ -163,10 +178,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     gap: 12,
   },
-  emptyTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text },
+  emptyIconBg: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.glass.background,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontFamily: "DMSerifDisplay_400Regular",
+    color: Colors.textWarm,
+  },
   emptyText: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textSecondary,
     textAlign: "center",
   },
@@ -177,32 +207,40 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginTop: 8,
   },
-  emptyBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.textInverse },
+  emptyBtnText: {
+    fontSize: 15,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.background,
+  },
   list: { paddingHorizontal: 20, paddingTop: 8 },
   patientCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.glass.background,
     borderRadius: 18,
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
     marginBottom: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
   patientCardActive: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primaryLight,
   },
   patientInfo: { flex: 1, marginLeft: 14 },
-  patientName: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: Colors.text, marginBottom: 4 },
+  patientName: {
+    fontSize: 18,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.text,
+    marginBottom: 4,
+  },
   patientMeta: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 3 },
-  patientMetaText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textSecondary },
+  patientMetaText: {
+    fontSize: 13,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.textSecondary,
+  },
   dot: { color: Colors.textTertiary },
   patientPhone: { flexDirection: "row", alignItems: "center", gap: 5 },
-  deleteBtn: { padding: 4 },
+  deleteBtn: { padding: 6 },
 });

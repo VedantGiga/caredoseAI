@@ -5,7 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Platform,
 } from "react-native";
+import { BlurView } from "expo-blur";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
@@ -89,74 +91,88 @@ export default function MedicineDoseCard({ dose, onMarkTaken, onMarkMissed }: Pr
   };
 
   return (
-    <View style={styles.card}>
-      <View style={[styles.statusStrip, { backgroundColor: statusConfig.color }]} />
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.nameSection}>
-            <Text style={styles.medicineName}>{dose.medicineName}</Text>
-            <Text style={styles.dosage}>{dose.dosage}</Text>
-          </View>
-          <View style={[styles.badge, { backgroundColor: statusConfig.bg }]}>
-            <Feather name={statusConfig.icon} size={12} color={statusConfig.color} />
-            <Text style={[styles.badgeText, { color: statusConfig.color }]}>
-              {statusConfig.label}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.footer}>
-          <View style={styles.timeRow}>
-            <Feather name="clock" size={14} color={Colors.textTertiary} />
-            <Text style={styles.timeText}>{formatTime(dose.scheduledTime)}</Text>
-            {dose.source && (
-              <View style={styles.sourceChip}>
-                <Text style={styles.sourceText}>{dose.source}</Text>
+    <View style={styles.cardOuter}>
+      <BlurView
+        intensity={Platform.OS === "ios" ? 15 : 6}
+        tint="dark"
+        style={styles.cardBlur}
+      >
+        <View style={styles.cardRow}>
+          <View style={[styles.statusStrip, { backgroundColor: statusConfig.color }]} />
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <View style={styles.nameSection}>
+                <Text style={styles.medicineName}>{dose.medicineName}</Text>
+                <Text style={styles.dosage}>{dose.dosage}</Text>
               </View>
-            )}
-          </View>
-
-          {dose.status === "pending" && dose.logId && (
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.actionBtnTaken}
-                onPress={handleMarkTaken}
-                activeOpacity={0.8}
-              >
-                <Feather name="check" size={14} color={Colors.taken} />
-                <Text style={[styles.actionText, { color: Colors.taken }]}>Taken</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionBtnMissed}
-                onPress={handleMarkMissed}
-                activeOpacity={0.8}
-              >
-                <Feather name="x" size={14} color={Colors.missed} />
-                <Text style={[styles.actionText, { color: Colors.missed }]}>Missed</Text>
-              </TouchableOpacity>
+              <View style={[styles.badge, { backgroundColor: statusConfig.bg }]}>
+                <Feather name={statusConfig.icon} size={11} color={statusConfig.color} />
+                <Text style={[styles.badgeText, { color: statusConfig.color }]}>
+                  {statusConfig.label}
+                </Text>
+              </View>
             </View>
-          )}
+
+            <View style={styles.footer}>
+              <View style={styles.timeRow}>
+                <Feather name="clock" size={13} color={Colors.textTertiary} />
+                <Text style={styles.timeText}>{formatTime(dose.scheduledTime)}</Text>
+                {dose.source && (
+                  <View style={styles.sourceChip}>
+                    <Text style={styles.sourceText}>{dose.source}</Text>
+                  </View>
+                )}
+              </View>
+
+              {dose.status === "pending" && dose.logId && (
+                <View style={styles.actions}>
+                  <TouchableOpacity
+                    style={styles.actionBtnTaken}
+                    onPress={handleMarkTaken}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="check" size={13} color={Colors.taken} />
+                    <Text style={[styles.actionText, { color: Colors.taken }]}>Taken</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionBtnMissed}
+                    onPress={handleMarkMissed}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="x" size={13} color={Colors.missed} />
+                    <Text style={[styles.actionText, { color: Colors.missed }]}>Missed</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
         </View>
-      </View>
+      </BlurView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.surface,
+  cardOuter: {
     borderRadius: 16,
-    flexDirection: "row",
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
     overflow: "hidden",
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  cardBlur: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+  cardRow: {
+    flexDirection: "row",
   },
   statusStrip: {
-    width: 4,
+    width: 3,
   },
   content: {
     flex: 1,
@@ -173,14 +189,14 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   medicineName: {
-    fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 17,
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.text,
     marginBottom: 2,
   },
   dosage: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    fontFamily: "DMSans_400Regular",
     color: Colors.textSecondary,
   },
   badge: {
@@ -192,8 +208,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   badgeText: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    fontFamily: "DMSans_600SemiBold",
   },
   footer: {
     flexDirection: "row",
@@ -207,24 +223,26 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textTertiary,
   },
   sourceChip: {
-    backgroundColor: Colors.surfaceAlt,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
   },
   sourceText: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
+    fontSize: 10,
+    fontFamily: "DMSans_500Medium",
     color: Colors.textSecondary,
     textTransform: "capitalize",
   },
   actions: {
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
   },
   actionBtnTaken: {
     flexDirection: "row",
@@ -245,7 +263,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   actionText: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+    fontFamily: "DMSans_600SemiBold",
   },
 });

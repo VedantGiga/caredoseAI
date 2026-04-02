@@ -104,7 +104,7 @@ export default function PrescriptionScannerScreen() {
 
       <View style={styles.heroSection}>
         <View style={styles.heroIcon}>
-          <Feather name="camera" size={36} color="#2563EB" />
+          <Feather name="camera" size={32} color={Colors.secondary} />
         </View>
         <Text style={styles.heroTitle}>AI Prescription Scanner</Text>
         <Text style={styles.heroSubtitle}>
@@ -119,8 +119,8 @@ export default function PrescriptionScannerScreen() {
             onPress={() => pickImage(true)}
             activeOpacity={0.8}
           >
-            <View style={[styles.uploadOptionIcon, { backgroundColor: "#DBEAFE" }]}>
-              <Feather name="camera" size={28} color="#2563EB" />
+            <View style={[styles.uploadOptionIcon, { backgroundColor: "rgba(129, 140, 248, 0.12)" }]}>
+              <Feather name="camera" size={26} color={Colors.secondary} />
             </View>
             <Text style={styles.uploadOptionTitle}>Take Photo</Text>
             <Text style={styles.uploadOptionSubtitle}>Use your camera</Text>
@@ -132,7 +132,7 @@ export default function PrescriptionScannerScreen() {
             activeOpacity={0.8}
           >
             <View style={[styles.uploadOptionIcon, { backgroundColor: Colors.primaryLight }]}>
-              <Feather name="image" size={28} color={Colors.primary} />
+              <Feather name="image" size={26} color={Colors.primary} />
             </View>
             <Text style={styles.uploadOptionTitle}>Upload Image</Text>
             <Text style={styles.uploadOptionSubtitle}>From your gallery</Text>
@@ -164,7 +164,7 @@ export default function PrescriptionScannerScreen() {
       {medicines.length > 0 && (
         <View style={styles.resultsSection}>
           <View style={styles.resultHeader}>
-            <Feather name="check-circle" size={20} color={Colors.taken} />
+            <Feather name="check-circle" size={18} color={Colors.taken} />
             <Text style={styles.resultTitle}>
               {medicines.length} Medicine{medicines.length > 1 ? "s" : ""} Found
             </Text>
@@ -187,7 +187,7 @@ export default function PrescriptionScannerScreen() {
                 onPress={() => addMedicineToSchedule(med)}
                 activeOpacity={0.8}
               >
-                <Feather name="plus" size={16} color={Colors.textInverse} />
+                <Feather name="plus" size={14} color={Colors.background} />
                 <Text style={styles.addToScheduleBtnText}>Add</Text>
               </TouchableOpacity>
             </View>
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  navTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  navTitle: { fontSize: 17, fontFamily: "DMSans_600SemiBold", color: Colors.text },
   heroSection: {
     alignItems: "center",
     marginBottom: 28,
@@ -227,60 +227,57 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#DBEAFE",
+    backgroundColor: "rgba(129, 140, 248, 0.12)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(129, 140, 248, 0.2)",
   },
   heroTitle: {
     fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
+    fontFamily: "DMSerifDisplay_400Regular",
+    color: Colors.textWarm,
     marginBottom: 8,
     textAlign: "center",
   },
   heroSubtitle: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textSecondary,
     textAlign: "center",
     lineHeight: 22,
   },
   uploadSection: {
     flexDirection: "row",
-    gap: 14,
+    gap: 12,
     marginBottom: 24,
   },
   uploadOption: {
     flex: 1,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.glass.background,
     borderRadius: 18,
     padding: 20,
     alignItems: "center",
     gap: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
   uploadOptionIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
   },
   uploadOptionTitle: {
     fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.text,
   },
   uploadOptionSubtitle: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textTertiary,
   },
   imageSection: {
@@ -292,16 +289,24 @@ const styles = StyleSheet.create({
     height: 250,
     borderRadius: 16,
     backgroundColor: Colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
   retakeBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     marginTop: 12,
+    backgroundColor: Colors.glass.background,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
   retakeBtnText: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "DMSans_500Medium",
     color: Colors.textSecondary,
   },
   loadingSection: {
@@ -311,12 +316,12 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.text,
   },
   loadingSubtext: {
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textTertiary,
   },
   resultsSection: {
@@ -330,46 +335,41 @@ const styles = StyleSheet.create({
   },
   resultTitle: {
     fontSize: 18,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "DMSans_700Bold",
     color: Colors.text,
   },
   medicineResult: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.glass.background,
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: Colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
+    borderColor: Colors.glass.border,
   },
   medicineResultInfo: { flex: 1 },
   medicineResultName: {
     fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.text,
     marginBottom: 4,
   },
   medicineResultDosage: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textSecondary,
   },
   medicineResultFreq: {
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textTertiary,
     marginTop: 2,
     textTransform: "capitalize",
   },
   medicineResultTime: {
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textTertiary,
   },
   addToScheduleBtn: {
@@ -383,8 +383,8 @@ const styles = StyleSheet.create({
   },
   addToScheduleBtnText: {
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textInverse,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.background,
   },
   noResultsSection: {
     alignItems: "center",
@@ -393,12 +393,12 @@ const styles = StyleSheet.create({
   },
   noResultsText: {
     fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.text,
   },
   noResultsSubtext: {
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textTertiary,
     textAlign: "center",
   },

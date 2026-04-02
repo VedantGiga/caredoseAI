@@ -54,7 +54,6 @@ export default function LoginScreen() {
       }, token);
     } catch (e) {
       console.error("Token fetch failed:", e);
-      // Fallback without token (will fail on API calls)
       setAuth({
         id: firebaseUser.uid,
         name: firebaseUser.displayName || "User",
@@ -115,7 +114,6 @@ export default function LoginScreen() {
       router.replace("/(tabs)");
     } catch (err: any) {
       console.log("Google Sign-In Error:", err);
-      // Don't alert if user cancelled
       if (err.code !== "7" && err.code !== "SIGN_IN_CANCELLED") {
         Alert.alert("Google Login Failed", "Could not sign in with Google.");
       }
@@ -141,7 +139,7 @@ export default function LoginScreen() {
       >
         <View style={styles.logoSection}>
           <View style={styles.logoIcon}>
-            <Feather name="heart" size={28} color={Colors.primary} />
+            <Feather name="heart" size={26} color={Colors.primary} />
           </View>
           <Text style={styles.appName}>CareDose AI</Text>
           <Text style={styles.tagline}>Smart Medicine Assistant</Text>
@@ -154,7 +152,7 @@ export default function LoginScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email</Text>
             <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
-              <Feather name="mail" size={18} color={Colors.textTertiary} />
+              <Feather name="mail" size={16} color={Colors.textTertiary} />
               <TextInput
                 style={styles.input}
                 placeholder="your@email.com"
@@ -172,7 +170,7 @@ export default function LoginScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
             <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-              <Feather name="lock" size={18} color={Colors.textTertiary} />
+              <Feather name="lock" size={16} color={Colors.textTertiary} />
               <TextInput
                 style={styles.input}
                 placeholder="••••••••"
@@ -184,7 +182,7 @@ export default function LoginScreen() {
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                 <Feather
                   name={showPassword ? "eye-off" : "eye"}
-                  size={18}
+                  size={16}
                   color={Colors.textTertiary}
                 />
               </TouchableOpacity>
@@ -199,7 +197,7 @@ export default function LoginScreen() {
             activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.textInverse} />
+              <ActivityIndicator color={Colors.background} />
             ) : (
               <Text style={styles.buttonText}>Sign In</Text>
             )}
@@ -218,7 +216,7 @@ export default function LoginScreen() {
             activeOpacity={0.8}
           >
             <View style={styles.googleIconContainer}>
-              <Feather name="log-in" size={20} color={Colors.text} />
+              <Feather name="log-in" size={18} color={Colors.text} />
             </View>
             <Text style={styles.googleButtonText}>Google</Text>
           </TouchableOpacity>
@@ -250,44 +248,43 @@ const styles = StyleSheet.create({
     marginBottom: 36,
   },
   logoIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "rgba(52, 211, 153, 0.2)",
   },
   appName: {
     fontSize: 26,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
+    fontFamily: "DMSerifDisplay_400Regular",
+    color: Colors.textWarm,
   },
   tagline: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textSecondary,
     marginTop: 4,
   },
   card: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.glass.background,
     borderRadius: 24,
     padding: 28,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
   title: {
     fontSize: 26,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "DMSans_700Bold",
     color: Colors.text,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textSecondary,
     marginBottom: 28,
   },
@@ -295,21 +292,23 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   label: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
+    fontSize: 13,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.textSecondary,
     marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.surfaceAlt,
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 12,
-    borderWidth: 1.5,
-    borderColor: "transparent",
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
   inputError: {
     borderColor: Colors.error,
@@ -317,12 +316,12 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.text,
   },
   errorText: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.error,
     marginTop: 4,
   },
@@ -339,19 +338,19 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textInverse,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.background,
   },
   registerLink: {
     alignItems: "center",
   },
   registerText: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "DMSans_400Regular",
     color: Colors.textSecondary,
   },
   registerTextBold: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.primary,
   },
   divider: {
@@ -364,35 +363,33 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 1,
     backgroundColor: Colors.border,
-    opacity: 0.5,
   },
   dividerText: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    fontFamily: "DMSans_400Regular",
     color: Colors.textTertiary,
-    textTransform: "lowercase",
   },
   googleButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.surface,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: Colors.glass.borderElevated,
     borderRadius: 14,
     paddingVertical: 15,
     marginBottom: 24,
     gap: 12,
   },
   googleIconContainer: {
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
     alignItems: "center",
     justifyContent: "center",
   },
   googleButtonText: {
     fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     color: Colors.text,
   },
 });

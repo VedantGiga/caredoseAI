@@ -9,13 +9,14 @@ interface Props {
 }
 
 const AVATAR_COLORS = [
-  "#6366F1",
-  "#8B5CF6",
-  "#EC4899",
-  "#F59E0B",
-  "#10B981",
-  "#3B82F6",
-  "#EF4444",
+  "#818CF8",
+  "#A78BFA",
+  "#F472B6",
+  "#FBBF24",
+  "#34D399",
+  "#60A5FA",
+  "#F87171",
+  "#FB923C",
 ];
 
 function getAvatarColor(name: string): string {
@@ -55,16 +56,11 @@ const styles = StyleSheet.create({
   avatar: {
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.15)",
   },
   initials: {
-    fontFamily: "Inter_700Bold",
-    color: Colors.textInverse,
+    fontFamily: "DMSans_700Bold",
+    color: "#FFFFFF",
   },
 });

@@ -1,35 +1,59 @@
+/**
+ * CareDose AI — Premium Dark Design System
+ * Inspired by Ronas IT health/wellness aesthetic
+ */
 export const Colors = {
-  primary: "#10B981",
-  primaryDark: "#059669",
-  primaryLight: "#D1FAE5",
-  secondary: "#6366F1",
-  accent: "#F59E0B",
+  // === Primary Accent ===
+  primary: "#34D399",       // Soft emerald
+  primaryDark: "#059669",   // Deep emerald
+  primaryLight: "rgba(52, 211, 153, 0.15)", // Emerald glow
 
-  taken: "#10B981",
-  takenLight: "#D1FAE5",
-  missed: "#EF4444",
-  missedLight: "#FEE2E2",
-  pending: "#F59E0B",
-  pendingLight: "#FEF3C7",
+  // === Secondary & Accent ===
+  secondary: "#818CF8",     // Soft indigo
+  accent: "#FBBF24",        // Warm amber
 
-  background: "#F8FAFC",
-  surface: "#FFFFFF",
-  surfaceAlt: "#F1F5F9",
-  border: "#E2E8F0",
-  borderLight: "#F1F5F9",
+  // === Status Colors ===
+  taken: "#34D399",
+  takenLight: "rgba(52, 211, 153, 0.12)",
+  missed: "#F87171",
+  missedLight: "rgba(248, 113, 113, 0.12)",
+  pending: "#FBBF24",
+  pendingLight: "rgba(251, 191, 36, 0.12)",
 
-  text: "#0F172A",
-  textSecondary: "#64748B",
-  textTertiary: "#94A3B8",
+  // === Backgrounds (layered depth) ===
+  background: "#0A0A0A",
+  surface: "rgba(255, 255, 255, 0.05)",
+  surfaceAlt: "rgba(255, 255, 255, 0.03)",
+  surfaceElevated: "rgba(255, 255, 255, 0.08)",
+
+  // === Borders ===
+  border: "rgba(255, 255, 255, 0.08)",
+  borderLight: "rgba(255, 255, 255, 0.04)",
+  borderFocused: "rgba(52, 211, 153, 0.4)",
+
+  // === Text ===
+  text: "#F5F5F7",
+  textSecondary: "#8E8E93",
+  textTertiary: "#48484A",
   textInverse: "#FFFFFF",
+  textWarm: "#E8DCC8",      // Warm cream for editorial headlines
 
-  success: "#10B981",
-  error: "#EF4444",
-  warning: "#F59E0B",
-  info: "#6366F1",
+  // === Semantic ===
+  success: "#34D399",
+  error: "#F87171",
+  warning: "#FBBF24",
+  info: "#818CF8",
+
+  // === Glass effect helpers ===
+  glass: {
+    background: "rgba(255, 255, 255, 0.05)",
+    border: "rgba(255, 255, 255, 0.08)",
+    backgroundElevated: "rgba(255, 255, 255, 0.08)",
+    borderElevated: "rgba(255, 255, 255, 0.12)",
+  },
 
   gradient: {
-    start: "#10B981",
+    start: "#34D399",
     end: "#059669",
   },
 };

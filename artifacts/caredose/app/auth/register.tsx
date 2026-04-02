@@ -20,7 +20,6 @@ import Constants from "expo-constants";
 import { useAuthStore } from "@/store/authStore";
 import { auth, getGoogleSignin } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile, signInWithCredential, GoogleAuthProvider } from "firebase/auth";
-import Animated, { FadeInUp } from "react-native-reanimated";
 
 const isExpoGo = Constants.appOwnership === "expo";
 
@@ -56,7 +55,6 @@ export default function RegisterScreen() {
         photoURL: firebaseUser.photoURL || undefined,
       }, token);
       
-      // Trigger auto-creation/sync on server
       try {
         const { authApi } = require("@/lib/api");
         await authApi.me();
@@ -78,17 +76,9 @@ export default function RegisterScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
-      // 1. Create user in Firebase
       const userCredential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
-      
-      // 2. Update profile with display name
-      await updateProfile(userCredential.user, {
-        displayName: name.trim()
-      });
-
-      // 3. Sync with local store
+      await updateProfile(userCredential.user, { displayName: name.trim() });
       await syncAuth(userCredential.user, name.trim());
-
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)");
     } catch (err: any) {
@@ -164,17 +154,14 @@ export default function RegisterScreen() {
           <Text style={styles.subtitle}>Join CareDose AI to manage medicines</Text>
         </View>
 
-        <Animated.View 
-          entering={FadeInUp.duration(1000).springify()}
-          style={styles.card}
-        >
+        <View style={styles.card}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Full Name</Text>
             <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
-              <Feather name="user" size={18} color={Colors.textTertiary} />
+              <Feather name="user" size={16} color={Colors.textTertiary} />
               <TextInput
                 style={styles.input}
-                placeholder="Vedant Sharma"
+                placeholder="Your full name"
                 placeholderTextColor={Colors.textTertiary}
                 value={name}
                 onChangeText={setName}
@@ -187,7 +174,7 @@ export default function RegisterScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email</Text>
             <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
-              <Feather name="mail" size={18} color={Colors.textTertiary} />
+              <Feather name="mail" size={16} color={Colors.textTertiary} />
               <TextInput
                 style={styles.input}
                 placeholder="your@email.com"
@@ -204,7 +191,7 @@ export default function RegisterScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
             <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-              <Feather name="lock" size={18} color={Colors.textTertiary} />
+              <Feather name="lock" size={16} color={Colors.textTertiary} />
               <TextInput
                 style={styles.input}
                 placeholder="••••••••"
@@ -216,7 +203,7 @@ export default function RegisterScreen() {
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                 <Feather
                   name={showPassword ? "eye-off" : "eye"}
-                  size={18}
+                  size={16}
                   color={Colors.textTertiary}
                 />
               </TouchableOpacity>
@@ -231,187 +218,179 @@ export default function RegisterScreen() {
             activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.textInverse} />
+              <ActivityIndicator color={Colors.background} />
             ) : (
               <Text style={styles.buttonText}>Create Account</Text>
-                )}
-              </TouchableOpacity>
+            )}
+          </TouchableOpacity>
 
-              <View style={styles.divider}>
-                <View style={styles.line} />
-                <Text style={styles.dividerText}>or continue with</Text>
-                <View style={styles.line} />
-              </View>
+          <View style={styles.divider}>
+            <View style={styles.line} />
+            <Text style={styles.dividerText}>or continue with</Text>
+            <View style={styles.line} />
+          </View>
 
-              <TouchableOpacity
-                style={styles.googleButton}
-                onPress={handleGoogleRegister}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                <View style={styles.googleIconContainer}>
-                  <Feather name="log-in" size={20} color={Colors.text} />
-                </View>
-                <Text style={styles.googleButtonText}>Google</Text>
-              </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogleRegister}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <View style={styles.googleIconContainer}>
+              <Feather name="log-in" size={18} color={Colors.text} />
+            </View>
+            <Text style={styles.googleButtonText}>Google</Text>
+          </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.loginLink}
-                onPress={() => router.back()}
-              >
-                <Text style={styles.loginText}>
-                  Already have an account?{" "}
-                  <Text style={styles.loginTextBold}>Sign in</Text>
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      );
-    }
+          <TouchableOpacity
+            style={styles.loginLink}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.loginText}>
+              Already have an account?{" "}
+              <Text style={styles.loginTextBold}>Sign in</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
 
-    const styles = StyleSheet.create({
-      flex: { flex: 1, backgroundColor: Colors.background },
-      container: {
-        flexGrow: 1,
-        paddingHorizontal: 24,
-      },
-      backBtn: {
-        marginBottom: 24,
-        width: 40,
-        height: 40,
-        alignItems: "center",
-        justifyContent: "center",
-      },
-      header: {
-        marginBottom: 28,
-      },
-      title: {
-        fontSize: 30,
-        fontFamily: "Inter_700Bold",
-        color: Colors.text,
-        marginBottom: 6,
-      },
-      subtitle: {
-        fontSize: 15,
-        fontFamily: "Inter_400Regular",
-        color: Colors.textSecondary,
-      },
-      card: {
-        backgroundColor: Colors.surface,
-        borderRadius: 24,
-        padding: 28,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-        elevation: 4,
-      },
-      inputGroup: {
-        marginBottom: 18,
-      },
-      label: {
-        fontSize: 14,
-        fontFamily: "Inter_600SemiBold",
-        color: Colors.text,
-        marginBottom: 8,
-      },
-      inputWrapper: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: Colors.surfaceAlt,
-        borderRadius: 14,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        gap: 12,
-        borderWidth: 1.5,
-        borderColor: "transparent",
-      },
-      inputError: {
-        borderColor: Colors.error,
-      },
-      input: {
-        flex: 1,
-        fontSize: 16,
-        fontFamily: "Inter_400Regular",
-        color: Colors.text,
-      },
-      errorText: {
-        fontSize: 12,
-        fontFamily: "Inter_400Regular",
-        color: Colors.error,
-        marginTop: 4,
-      },
-      button: {
-        backgroundColor: Colors.primary,
-        borderRadius: 18,
-        paddingVertical: 18,
-        alignItems: "center",
-        marginTop: 8,
-        marginBottom: 20,
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 8,
-      },
-      buttonDisabled: { opacity: 0.7 },
-      buttonText: {
-        fontSize: 18,
-        fontFamily: "Inter_700Bold",
-        color: Colors.textInverse,
-      },
-      loginLink: {
-        alignItems: "center",
-      },
-      loginText: {
-        fontSize: 14,
-        fontFamily: "Inter_400Regular",
-        color: Colors.textSecondary,
-      },
-      loginTextBold: {
-        fontFamily: "Inter_600SemiBold",
-        color: Colors.primary,
-      },
-      divider: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginVertical: 24,
-        gap: 12,
-      },
-      line: {
-        flex: 1,
-        height: 1,
-        backgroundColor: Colors.border,
-        opacity: 0.5,
-      },
-      dividerText: {
-        fontSize: 13,
-        fontFamily: "Inter_400Regular",
-        color: Colors.textTertiary,
-        textTransform: "lowercase",
-      },
-      googleButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: Colors.surface,
-        borderWidth: 1.5,
-        borderColor: Colors.border,
-        borderRadius: 14,
-        paddingVertical: 15,
-        marginBottom: 24,
-        gap: 12,
-      },
-      googleIconContainer: {
-        width: 24,
-        height: 24,
-        alignItems: "center",
-        justifyContent: "center",
-      },
-      googleButtonText: {
-        fontSize: 16,
-        fontFamily: "Inter_600SemiBold",
-        color: Colors.text,
-      },
-    });
+const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: Colors.background },
+  container: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+  },
+  backBtn: {
+    marginBottom: 24,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  header: {
+    marginBottom: 28,
+  },
+  title: {
+    fontSize: 30,
+    fontFamily: "DMSerifDisplay_400Regular",
+    color: Colors.textWarm,
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 15,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.textSecondary,
+  },
+  card: {
+    backgroundColor: Colors.glass.background,
+    borderRadius: 24,
+    padding: 28,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+  },
+  inputGroup: {
+    marginBottom: 18,
+  },
+  label: {
+    fontSize: 13,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+  },
+  inputError: {
+    borderColor: Colors.error,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.text,
+  },
+  errorText: {
+    fontSize: 12,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.error,
+    marginTop: 4,
+  },
+  button: {
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    paddingVertical: 18,
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  buttonDisabled: { opacity: 0.7 },
+  buttonText: {
+    fontSize: 17,
+    fontFamily: "DMSans_700Bold",
+    color: Colors.background,
+  },
+  loginLink: {
+    alignItems: "center",
+  },
+  loginText: {
+    fontSize: 14,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.textSecondary,
+  },
+  loginTextBold: {
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.primary,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 24,
+    gap: 12,
+  },
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  dividerText: {
+    fontSize: 12,
+    fontFamily: "DMSans_400Regular",
+    color: Colors.textTertiary,
+  },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: Colors.glass.borderElevated,
+    borderRadius: 14,
+    paddingVertical: 15,
+    marginBottom: 24,
+    gap: 12,
+  },
+  googleIconContainer: {
+    width: 22,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontFamily: "DMSans_600SemiBold",
+    color: Colors.text,
+  },
+});
